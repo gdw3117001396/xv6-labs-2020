@@ -155,8 +155,9 @@ main(void)
     }
   }
 
-  // Read and run input commands.
+  // Read and run input commands. 
   while(getcmd(buf, sizeof(buf)) >= 0){
+    // cd 命令是一个例外，必须在父进程中，而不能新开子进程去执行，不然更改的是子进程的工作目录而不是父进程的工作目录
     if(buf[0] == 'c' && buf[1] == 'd' && buf[2] == ' '){
       // Chdir must be called by the parent, not the child.
       buf[strlen(buf)-1] = 0;  // chop \n
