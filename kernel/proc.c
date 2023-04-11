@@ -694,3 +694,16 @@ procdump(void)
     printf("\n");
   }
 }
+
+uint64 procSize(){
+  int size = 0;
+  struct proc *p = myproc();
+  for(p = proc; p < &proc[NPROC]; p++){
+      acquire(&p->lock);
+      if (p->state != UNUSED){
+        ++size;
+      }
+      release(&p->lock);
+  } 
+  return size;
+}
