@@ -412,7 +412,7 @@ sys_chdir(void)
   return 0;
 }
 
-uint64
+uint64 
 sys_exec(void)
 {
   char path[MAXPATH], *argv[MAXARG];

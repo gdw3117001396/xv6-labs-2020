@@ -401,7 +401,7 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 // Copy a null-terminated string from user to kernel.
 // Copy bytes to dst from virtual address srcva in a given page table,
 // until a '\0', or max.
-// Return 0 on success, -1 on error.
+// Return 0 on success, -1 on error. 从用户页表页表中的虚拟地址srcva复制max字节到dst
 int
 copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 {
@@ -410,14 +410,14 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 
   while(got_null == 0 && max > 0){
     va0 = PGROUNDDOWN(srcva);
-    pa0 = walkaddr(pagetable, va0);
+    pa0 = walkaddr(pagetable, va0); // 在软件中遍历页表，以确定srcva的物理地址pa0
     if(pa0 == 0)
       return -1;
     n = PGSIZE - (srcva - va0);
     if(n > max)
       n = max;
 
-    char *p = (char *) (pa0 + (srcva - va0));
+    char *p = (char *) (pa0 + (srcva - va0));  //由于内核将所有物理RAM地址映射到同一个内核虚拟地址,可以直接将字符串字节从pa0复制到dst
     while(n > 0){
       if(*p == '\0'){
         *dst = '\0';
