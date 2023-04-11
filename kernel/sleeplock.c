@@ -1,5 +1,5 @@
 // Sleeping locks
-
+// 释放CPU的锁
 #include "types.h"
 #include "riscv.h"
 #include "defs.h"

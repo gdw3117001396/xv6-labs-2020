@@ -5,6 +5,7 @@
 //
 // qemu ... -drive file=fs.img,if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
 //
+// 	磁盘设备驱动程序
 
 #include "types.h"
 #include "riscv.h"

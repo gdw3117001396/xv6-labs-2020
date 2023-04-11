@@ -3,7 +3,7 @@
 #include "memlayout.h"
 #include "riscv.h"
 #include "defs.h"
-
+// 早期机器模式启动代码
 void main();
 void timerinit();
 

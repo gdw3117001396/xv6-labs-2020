@@ -8,7 +8,7 @@
 //   control-d -- end of file
 //   control-p -- print process list
 //
-
+//连接到用户的键盘和屏幕
 #include <stdarg.h>
 
 #include "types.h"

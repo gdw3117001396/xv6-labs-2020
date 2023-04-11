@@ -1,4 +1,5 @@
-	# qemu -kernel loads the kernel at 0x80000000
+	# 首次启动指令
+        # qemu -kernel loads the kernel at 0x80000000
         # and causes each CPU to jump there.
         # kernel.ld causes the following code to
         # be placed at 0x80000000.

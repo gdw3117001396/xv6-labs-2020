@@ -3,7 +3,7 @@
         # mode come here.
         #
         # push all registers, call kerneltrap(), restore, return.
-        #
+        # 处理来自内核的陷入指令以及计时器中断
 .globl kerneltrap
 .globl kernelvec
 .align 4

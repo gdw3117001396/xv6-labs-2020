@@ -6,7 +6,7 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
-
+// 进程相关的系统调用
 uint64
 sys_exit(void)
 {

@@ -5,7 +5,7 @@
 #include "riscv.h"
 #include "defs.h"
 #include "fs.h"
-
+// 管理页表和地址空间
 /*
  * the kernel's page table.
  */

@@ -9,7 +9,7 @@ struct sleeplock;
 struct stat;
 struct superblock;
 
-// bio.c
+// bio.c 文件系统的磁盘块缓存
 void            binit(void);
 struct buf*     bread(uint, uint);
 void            brelse(struct buf*);
@@ -17,15 +17,15 @@ void            bwrite(struct buf*);
 void            bpin(struct buf*);
 void            bunpin(struct buf*);
 
-// console.c
+// console.c 连接到用户的键盘和屏幕
 void            consoleinit(void);
 void            consoleintr(int);
 void            consputc(int);
 
-// exec.c
+// exec.c exec()系统调用
 int             exec(char*, char**);
 
-// file.c
+// file.c  文件描述符支持
 struct file*    filealloc(void);
 void            fileclose(struct file*);
 struct file*    filedup(struct file*);
@@ -34,7 +34,7 @@ int             fileread(struct file*, uint64, int n);
 int             filestat(struct file*, uint64 addr);
 int             filewrite(struct file*, uint64, int n);
 
-// fs.c
+// fs.c  文件系统
 void            fsinit(int);
 int             dirlink(struct inode*, char*, uint);
 struct inode*   dirlookup(struct inode*, char*, uint*);
@@ -54,34 +54,34 @@ void            stati(struct inode*, struct stat*);
 int             writei(struct inode*, int, uint64, uint, uint);
 void            itrunc(struct inode*);
 
-// ramdisk.c
+// ramdisk.c  使用由qemu -initrd fs.img加载的磁盘镜像的ramdisk。
 void            ramdiskinit(void);
 void            ramdiskintr(void);
 void            ramdiskrw(struct buf*);
 
-// kalloc.c
+// kalloc.c  物理页面分配器
 void*           kalloc(void);
 void            kfree(void *);
 void            kinit(void);
 
-// log.c
+// log.c 文件系统日志记录以及崩溃修复
 void            initlog(int, struct superblock*);
 void            log_write(struct buf*);
 void            begin_op(void);
 void            end_op(void);
 
-// pipe.c
+// pipe.c  管道
 int             pipealloc(struct file**, struct file**);
 void            pipeclose(struct pipe*, int);
 int             piperead(struct pipe*, uint64, int);
 int             pipewrite(struct pipe*, uint64, int);
 
-// printf.c
+// printf.c   格式化输出到控制台
 void            printf(char*, ...);
 void            panic(char*) __attribute__((noreturn));
 void            printfinit(void);
 
-// proc.c
+// proc.c  进程和调度
 int             cpuid(void);
 void            exit(int);
 int             fork(void);
@@ -105,10 +105,10 @@ int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
 
-// swtch.S
+// swtch.S  线程切换
 void            swtch(struct context*, struct context*);
 
-// spinlock.c
+// spinlock.c   自旋锁，不释放CPU
 void            acquire(struct spinlock*);
 int             holding(struct spinlock*);
 void            initlock(struct spinlock*, char*);
@@ -116,13 +116,13 @@ void            release(struct spinlock*);
 void            push_off(void);
 void            pop_off(void);
 
-// sleeplock.c
+// sleeplock.c  释放CPU的锁
 void            acquiresleep(struct sleeplock*);
 void            releasesleep(struct sleeplock*);
 int             holdingsleep(struct sleeplock*);
 void            initsleeplock(struct sleeplock*, char*);
 
-// string.c
+// string.c     字符串和字节数组库
 int             memcmp(const void*, const void*, uint);
 void*           memmove(void*, const void*, uint);
 void*           memset(void*, int, uint);
@@ -131,7 +131,7 @@ int             strlen(const char*);
 int             strncmp(const char*, const char*, uint);
 char*           strncpy(char*, const char*, int);
 
-// syscall.c
+// syscall.c   Dispatch system calls to handling function.
 int             argint(int, int*);
 int             argstr(int, char*, int);
 int             argaddr(int, uint64 *);
@@ -139,21 +139,21 @@ int             fetchstr(uint64, char*, int);
 int             fetchaddr(uint64, uint64*);
 void            syscall();
 
-// trap.c
+// trap.c       对陷入指令和中断进行处理并返回的C代码
 extern uint     ticks;
 void            trapinit(void);
 void            trapinithart(void);
 extern struct spinlock tickslock;
 void            usertrapret(void);
 
-// uart.c
+// uart.c      串口控制台设备驱动程序
 void            uartinit(void);
 void            uartintr(void);
 void            uartputc(int);
 void            uartputc_sync(int);
 int             uartgetc(void);
 
-// vm.c
+// vm.c      管理页表和地址空间
 void            kvminit(void);
 void            kvminithart(void);
 uint64          kvmpa(uint64);
@@ -172,13 +172,13 @@ int             copyout(pagetable_t, uint64, char *, uint64);
 int             copyin(pagetable_t, char *, uint64, uint64);
 int             copyinstr(pagetable_t, char *, uint64, uint64);
 
-// plic.c
+// plic.c   RISC-V中断控制器
 void            plicinit(void);
 void            plicinithart(void);
 int             plic_claim(void);
 void            plic_complete(int);
 
-// virtio_disk.c
+// virtio_disk.c 	磁盘设备驱动程序
 void            virtio_disk_init(void);
 void            virtio_disk_rw(struct buf *, int);
 void            virtio_disk_intr(void);

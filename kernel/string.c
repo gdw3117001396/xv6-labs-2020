@@ -1,5 +1,5 @@
 #include "types.h"
-
+// 字符串和字节数组库
 void*
 memset(void *dst, int c, uint n)
 {

@@ -1,6 +1,6 @@
 //
 // Support functions for system calls that involve file descriptors.
-//
+// 文件描述符支持
 
 #include "types.h"
 #include "riscv.h"

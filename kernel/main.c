@@ -7,6 +7,7 @@
 volatile static int started = 0;
 
 // start() jumps here in supervisor mode on all CPUs.
+// 在启动过程中控制其他模块初始化
 void
 main()
 {

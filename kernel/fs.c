@@ -8,6 +8,7 @@
 // This file contains the low-level file system manipulation
 // routines.  The (higher-level) system call implementations
 // are in sysfile.c.
+// 文件系统
 
 #include "types.h"
 #include "riscv.h"

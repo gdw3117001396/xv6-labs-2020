@@ -1,5 +1,5 @@
 // Mutual exclusion spin locks.
-
+// 自旋锁，不释放CPU
 #include "types.h"
 #include "param.h"
 #include "memlayout.h"

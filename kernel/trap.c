@@ -5,7 +5,7 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
-
+// 对陷入指令和中断进行处理并返回的C代码
 struct spinlock tickslock;
 uint ticks;
 

@@ -2,7 +2,7 @@
 // File-system system calls.
 // Mostly argument checking, since we don't trust
 // user code, and calls into file.c and fs.c.
-//
+//  文件相关的系统调用
 
 #include "types.h"
 #include "riscv.h"

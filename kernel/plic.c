@@ -6,7 +6,7 @@
 
 //
 // the riscv Platform Level Interrupt Controller (PLIC).
-//
+// RISC-V中断控制器
 
 void
 plicinit(void)

@@ -1,5 +1,13 @@
 {
     "files.associations": {
+        "defs.h": "c",
+        "elf.h": "c",
+        "param.h": "c",
+        "types.h": "c",
+        "memlayout.h": "c",
+        "proc.h": "c",
+        "riscv.h": "c",
+        "virtio.h": "c",
         "stat.h": "c",
         "user.h": "c"
     }

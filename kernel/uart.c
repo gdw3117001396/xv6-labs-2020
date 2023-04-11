@@ -1,6 +1,6 @@
 //
 // low-level driver routines for 16550a UART.
-//
+// 串口控制台设备驱动程序
 
 #include "types.h"
 #include "param.h"

@@ -1,6 +1,6 @@
 //
 // ramdisk that uses the disk image loaded by qemu -initrd fs.img
-//
+// 使用由qemu -initrd fs.img加载的磁盘镜像的ramdisk。
 
 #include "types.h"
 #include "riscv.h"
