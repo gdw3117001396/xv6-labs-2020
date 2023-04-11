@@ -45,7 +45,7 @@ start()
   int id = r_mhartid();
   w_tp(id);
 
-  // switch to supervisor mode and jump to main().
+  // switch to supervisor mode and jump to main().调用mret指令进入管理模式也就是内核态
   asm volatile("mret");
 }
 
