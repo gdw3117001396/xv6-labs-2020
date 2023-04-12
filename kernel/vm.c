@@ -52,9 +52,10 @@ void vmprint_helper(pagetable_t pagetable, uint64 level){
   for (int i = 0; i < 512; ++i){
     pte_t pte = pagetable[i];
     if (pte & PTE_V){
-      printf("%s%d: pte %p pa %p\n", buf[2 - level], i, pte, PTE2PA(pte));
-      if (level > 0){
-        vmprint_helper((pagetable_t)PTE2PA(pte), level - 1);
+      uint64 child = PTE2PA(pte);
+      printf("%s%d: pte %p pa %p\n", buf[2 - level], i, pte, child);
+      if (level > 0){  //  (pte & (PTE_R|PTE_W|PTE_X)) == 0) 判断是否不在最后一层。因为最后一层页表中页表项中W位，R位，X位起码有一位会被设置为1
+        vmprint_helper((pagetable_t)child, level - 1);
       }
     }
   }
