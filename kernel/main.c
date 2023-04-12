@@ -19,10 +19,10 @@ main()
     printf("\n");
     printf("xv6 kernel is booting\n");
     printf("\n");
-    kinit();         // physical page allocator
-    kvminit();       // create kernel page table
-    kvminithart();   // turn on paging
-    procinit();      // process table
+    kinit();         // physical page allocator 初始化分配器
+    kvminit();       // create kernel page table 创建内核的页表。
+    kvminithart();   // turn on paging 给MMU安装内核页表，这里地址转换就会被启用了
+    procinit();      // process table 每个进程分配一个内核栈
     trapinit();      // trap vectors
     trapinithart();  // install kernel trap vector
     plicinit();      // set up interrupt controller

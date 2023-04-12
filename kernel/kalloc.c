@@ -15,7 +15,7 @@ extern char end[]; // first address after kernel.
                    // defined by kernel.ld.
 
 struct run {
-  struct run *next;
+  struct run *next; //每个空闲页的列表元素是一个struct run
 };
 
 struct {
@@ -24,17 +24,17 @@ struct {
 } kmem;
 
 void
-kinit()
+kinit()  // 初始化分配器,初始化空闲列表以保存从内核结束到PHYSTOP之间的每一页。
 {
   initlock(&kmem.lock, "kmem");
   freerange(end, (void*)PHYSTOP);
 }
 
 void
-freerange(void *pa_start, void *pa_end)
+freerange(void *pa_start, void *pa_end) // 将内存添加到空闲列表中
 {
   char *p;
-  p = (char*)PGROUNDUP((uint64)pa_start);
+  p = (char*)PGROUNDUP((uint64)pa_start); // 使用PGROUNDUP来确保它只释放对齐的物理地址
   for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE)
     kfree(p);
 }
@@ -64,7 +64,7 @@ kfree(void *pa)
 
 // Allocate one 4096-byte page of physical memory.
 // Returns a pointer that the kernel can use.
-// Returns 0 if the memory cannot be allocated.
+// Returns 0 if the memory cannot be allocated. // 删除并返回空闲列表中的第一个元素。
 void *
 kalloc(void)
 {

@@ -47,13 +47,29 @@ kvminit()
   kvmmap(TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
 }
 
+static char *buf[3] = {"..", ".. ..", ".. .. .."};
+void vmprint_helper(pagetable_t pagetable, uint64 level){
+  for (int i = 0; i < 512; ++i){
+    pte_t pte = pagetable[i];
+    if (pte & PTE_V){
+      printf("%s%d: pte %p pa %p\n", buf[2 - level], i, pte, PTE2PA(pte));
+      if (level > 0){
+        vmprint_helper((pagetable_t)PTE2PA(pte), level - 1);
+      }
+    }
+  }
+}
+void vmprint(pagetable_t pagetable){
+  printf("page table %p\n", pagetable);
+  vmprint_helper(pagetable, 2);
+}
 // Switch h/w page table register to the kernel's page table,
-// and enable paging.
+// and enable paging.  安装内核页表。它将根页表页的物理地址写入寄存器satp。
 void
 kvminithart()
 {
-  w_satp(MAKE_SATP(kernel_pagetable));
-  sfence_vma();
+  w_satp(MAKE_SATP(kernel_pagetable)); //这里地址转换（页表）就会被启用了，之前还没有虚拟地址，运行这条指令之前，使用物理地址，还没有页表和映射
+  sfence_vma(); // 用于刷新当前CPU的TLB
 }
 
 // Return the address of the PTE in page table pagetable
@@ -68,6 +84,8 @@ kvminithart()
 //   21..29 -- 9 bits of level-1 index.
 //   12..20 -- 9 bits of level-0 index.
 //    0..11 -- 12 bits of byte offset within the page.
+// 为虚拟地址找到PTE,如果没有再初始化PTE以保存相关的物理页号、所需权限（PTE_W、PTE_X和/或PTE_R）以及用于标记PTE有效的PTE_V
+// 依赖于直接映射到内核虚拟地址空间中的物理内存
 pte_t *
 walk(pagetable_t pagetable, uint64 va, int alloc)
 {
@@ -75,7 +93,7 @@ walk(pagetable_t pagetable, uint64 va, int alloc)
     panic("walk");
 
   for(int level = 2; level > 0; level--) {
-    pte_t *pte = &pagetable[PX(level, va)];
+    pte_t *pte = &pagetable[PX(level, va)]; //它从pagetable中提取下一级页表的（物理）地址，然后使用该地址作为虚拟地址来获取下一级的pte 。
     if(*pte & PTE_V) {
       pagetable = (pagetable_t)PTE2PA(*pte);
     } else {
@@ -85,7 +103,7 @@ walk(pagetable_t pagetable, uint64 va, int alloc)
       *pte = PA2PTE(pagetable) | PTE_V;
     }
   }
-  return &pagetable[PX(0, va)];
+  return &pagetable[PX(0, va)]; //返回树中最低一级的PTE地址
 }
 
 // Look up a virtual address, return the physical address,
@@ -114,6 +132,7 @@ walkaddr(pagetable_t pagetable, uint64 va)
 // add a mapping to the kernel page table.
 // only used when booting.
 // does not flush TLB or enable paging.
+// 装载内核需要的转换。转换包括内核的指令和数据、物理内存的上限到 PHYSTOP，并包括实际上是设备的内存。
 void
 kvmmap(uint64 va, uint64 pa, uint64 sz, int perm)
 {
@@ -145,6 +164,7 @@ kvmpa(uint64 va)
 // physical addresses starting at pa. va and size might not
 // be page-aligned. Returns 0 on success, -1 if walk() couldn't
 // allocate a needed page-table page.
+//为新映射装载PTE,将范围虚拟地址到同等范围物理地址的映射装载到一个页表中。它以页面大小为间隔，为范围内的每个虚拟地址单独执行此操作
 int
 mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
 {
@@ -169,7 +189,7 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
 
 // Remove npages of mappings starting from va. va must be
 // page-aligned. The mappings must exist.
-// Optionally free the physical memory.
+// Optionally free the physical memory. 使用walk来查找对应的PTE，并使用kfree来释放PTE引用的物理内存。
 void
 uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
 {
@@ -224,7 +244,7 @@ uvminit(pagetable_t pagetable, uchar *src, uint sz)
 }
 
 // Allocate PTEs and physical memory to grow process from oldsz to
-// newsz, which need not be page aligned.  Returns new size or 0 on error.
+// newsz, which need not be page aligned.  Returns new size or 0 on error. 用kalloc分配物理内存，并用mappages将PTE添加到用户页表中。
 uint64
 uvmalloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
 {
@@ -254,7 +274,7 @@ uvmalloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
 // Deallocate user pages to bring the process size from oldsz to
 // newsz.  oldsz and newsz need not be page-aligned, nor does newsz
 // need to be less than oldsz.  oldsz can be larger than the actual
-// process size.  Returns the new process size.
+// process size.  Returns the new process size. 调用uvmunmap
 uint64
 uvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
 {

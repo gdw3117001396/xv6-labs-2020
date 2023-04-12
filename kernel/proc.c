@@ -21,7 +21,7 @@ static void freeproc(struct proc *p);
 
 extern char trampoline[]; // trampoline.S
 
-// initialize the proc table at boot time.
+// initialize the proc table at boot time. 为每个进程分配一个内核栈,将每个栈映射到KSTACK生成的虚拟地址，这为无效的栈保护页面留下了空间。
 void
 procinit(void)
 {
@@ -38,10 +38,10 @@ procinit(void)
       if(pa == 0)
         panic("kalloc");
       uint64 va = KSTACK((int) (p - proc));
-      kvmmap(va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
+      kvmmap(va, (uint64)pa, PGSIZE, PTE_R | PTE_W); // 将映射的PTE添加到内核页表中
       p->kstack = va;
   }
-  kvminithart();
+  kvminithart(); // 将内核页表重新加载到satp中，以便硬件知道新的PTE。
 }
 
 // Must be called with interrupts disabled,
@@ -234,7 +234,7 @@ userinit(void)
 }
 
 // Grow or shrink user memory by n bytes.
-// Return 0 on success, -1 on failure.
+// Return 0 on success, -1 on failure. 用于进程减少或增长其内存
 int
 growproc(int n)
 {

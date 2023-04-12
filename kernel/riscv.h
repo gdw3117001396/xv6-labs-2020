@@ -191,7 +191,7 @@ w_mtvec(uint64 x)
 static inline void 
 w_satp(uint64 x)
 {
-  asm volatile("csrw satp, %0" : : "r" (x));
+  asm volatile("csrw satp, %0" : : "r" (x)); // 这里地址转换（页表）就会被启用了，之前还没有虚拟地址，运行这条指令之前，使用物理地址，还没有页表和映射
 }
 
 static inline uint64
@@ -311,7 +311,7 @@ r_ra()
   return x;
 }
 
-// flush the TLB.
+// flush the TLB. 用于刷新当前CPU的TLB
 static inline void
 sfence_vma()
 {
@@ -337,7 +337,7 @@ sfence_vma()
 
 #define PTE2PA(pte) (((pte) >> 10) << 12)
 
-#define PTE_FLAGS(pte) ((pte) & 0x3FF)
+#define PTE_FLAGS(pte) ((pte) & 0x3FF)  
 
 // extract the three 9-bit page table indices from a virtual address.
 #define PXMASK          0x1FF // 9 bits
