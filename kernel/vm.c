@@ -51,7 +51,7 @@ kvminit()
 pagetable_t
 ukvminit(){
   pagetable_t kpagetable = uvmcreate();
-  if (kernel_pagetable == 0){
+  if (kpagetable == 0){
     return 0;
   }
   // uart registers
@@ -130,17 +130,17 @@ proc_ukvminithart(pagetable_t kpagetable)
 //   12..20 -- 9 bits of level-0 index.
 //    0..11 -- 12 bits of byte offset within the page.
 // 为虚拟地址找到PTE,如果没有再初始化PTE以保存相关的物理页号、所需权限（PTE_W、PTE_X和/或PTE_R）以及用于标记PTE有效的PTE_V
-// 依赖于直接映射到内核虚拟地址空间中的物理内存
+// 依赖于直接映射到内核虚拟地址空间中的物理内存 
 pte_t *
 walk(pagetable_t pagetable, uint64 va, int alloc)
 {
   if(va >= MAXVA)
     panic("walk");
-
+  // 高9位是在根页表中找到对应的pte, 找到后就切换到level1页表继续根据中9位来查找level0的页表
   for(int level = 2; level > 0; level--) {
     pte_t *pte = &pagetable[PX(level, va)]; //它从pagetable中提取下一级页表的（物理）地址，然后使用该地址作为虚拟地址来获取下一级的pte 。
     if(*pte & PTE_V) {
-      pagetable = (pagetable_t)PTE2PA(*pte);
+      pagetable = (pagetable_t)PTE2PA(*pte); // 切换到下一级页表
     } else {
       if(!alloc || (pagetable = (pde_t*)kalloc()) == 0)
         return 0;
@@ -148,12 +148,12 @@ walk(pagetable_t pagetable, uint64 va, int alloc)
       *pte = PA2PTE(pagetable) | PTE_V;
     }
   }
-  return &pagetable[PX(0, va)]; //返回树中最低一级的PTE地址
+  return &pagetable[PX(0, va)]; //返回level0中对应va低9位的PTE地址
 }
 
 // Look up a virtual address, return the physical address,
 // or 0 if not mapped.
-// Can only be used to look up user pages.
+// Can only be used to look up user pages. 通过虚拟地址返回物理地址，只能用于查找用户页面
 uint64
 walkaddr(pagetable_t pagetable, uint64 va)
 {
