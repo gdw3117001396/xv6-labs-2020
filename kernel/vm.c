@@ -5,7 +5,8 @@
 #include "riscv.h"
 #include "defs.h"
 #include "fs.h"
-
+#include "spinlock.h"
+#include "proc.h"
 /*
  * the kernel's page table.
  */
@@ -46,6 +47,43 @@ kvminit()
   // the highest virtual address in the kernel.
   kvmmap(TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
 }
+// 为进程创建内核页表
+pagetable_t
+ukvminit(){
+  pagetable_t kpagetable = uvmcreate();
+  if (kernel_pagetable == 0){
+    return 0;
+  }
+  // uart registers
+  ukvmmap(kpagetable, UART0, UART0, PGSIZE, PTE_R | PTE_W);
+
+  // virtio mmio disk interface
+  ukvmmap(kpagetable, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
+
+  // CLINT
+  ukvmmap(kpagetable, CLINT, CLINT, 0x10000, PTE_R | PTE_W);
+
+  // PLIC
+  ukvmmap(kpagetable, PLIC, PLIC, 0x400000, PTE_R | PTE_W);
+
+  // map kernel text executable and read-only.
+  ukvmmap(kpagetable, KERNBASE, KERNBASE, (uint64)etext-KERNBASE, PTE_R | PTE_X);
+
+  // map kernel data and the physical RAM we'll make use of.
+  ukvmmap(kpagetable, (uint64)etext, (uint64)etext, PHYSTOP-(uint64)etext, PTE_R | PTE_W);
+
+  // map the trampoline for trap entry/exit to
+  // the highest virtual address in the kernel.
+  ukvmmap(kpagetable, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
+  return kpagetable;
+}
+
+void
+ukvmmap(pagetable_t kpagetable, uint64 va, uint64 pa, uint64 sz, int perm){
+  if(mappages(kpagetable, va, sz, pa, perm) != 0){
+    panic("kvmmap");
+  }
+}
 
 static char *buf[3] = {"..", ".. ..", ".. .. .."};
 void vmprint_helper(pagetable_t pagetable, uint64 level){
@@ -73,6 +111,12 @@ kvminithart()
   sfence_vma(); // 用于刷新当前CPU的TLB
 }
 
+void 
+proc_ukvminithart(pagetable_t kpagetable)
+{
+  w_satp(MAKE_SATP(kpagetable));
+  sfence_vma();
+}
 // Return the address of the PTE in page table pagetable
 // that corresponds to virtual address va.  If alloc!=0,
 // create any required page-table pages.
@@ -144,7 +188,7 @@ kvmmap(uint64 va, uint64 pa, uint64 sz, int perm)
 // translate a kernel virtual address to
 // a physical address. only needed for
 // addresses on the stack.
-// assumes va is page aligned.
+// assumes va is page aligned.将内核虚拟地址转换为物理地址，只需要在堆栈上的地址。假设va是页对齐的。
 uint64
 kvmpa(uint64 va)
 {
@@ -152,7 +196,7 @@ kvmpa(uint64 va)
   pte_t *pte;
   uint64 pa;
   
-  pte = walk(kernel_pagetable, va, 0);
+  pte = walk(myproc()->kpagetable, va, 0);
   if(pte == 0)
     panic("kvmpa");
   if((*pte & PTE_V) == 0)
@@ -275,7 +319,7 @@ uvmalloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
 // Deallocate user pages to bring the process size from oldsz to
 // newsz.  oldsz and newsz need not be page-aligned, nor does newsz
 // need to be less than oldsz.  oldsz can be larger than the actual
-// process size.  Returns the new process size. 调用uvmunmap
+// process size.  Returns the new process size. 
 uint64
 uvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
 {
@@ -291,7 +335,7 @@ uvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
 }
 
 // Recursively free page-table pages.
-// All leaf mappings must already have been removed.
+// All leaf mappings must already have been removed. 递归释放页表页面。 所有的叶子映射必须已经被移除。
 void
 freewalk(pagetable_t pagetable)
 {

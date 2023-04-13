@@ -42,7 +42,7 @@ freerange(void *pa_start, void *pa_end) // 将内存添加到空闲列表中
 // Free the page of physical memory pointed at by v,
 // which normally should have been returned by a
 // call to kalloc().  (The exception is when
-// initializing the allocator; see kinit above.)
+// initializing the allocator; see kinit above.) // 释放内存
 void
 kfree(void *pa)
 {
