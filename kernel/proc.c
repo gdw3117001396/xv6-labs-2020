@@ -18,7 +18,7 @@ struct spinlock pid_lock;
 extern void forkret(void);
 static void wakeup1(struct proc *chan);
 static void freeproc(struct proc *p);
-
+extern void walk(pagetable_t, uint64, int);
 extern char trampoline[]; // trampoline.S
 
 // initialize the proc table at boot time. 为每个进程分配一个内核栈,将每个栈映射到KSTACK生成的虚拟地址，这为无效的栈保护页面留下了空间。
@@ -177,6 +177,7 @@ freeproc(struct proc *p)
   p->kstack = 0;
   // 释放内核页表
   freekpagetable(p->kpagetable);
+
   p->pagetable = 0;
   p->sz = 0;
   p->pid = 0;
