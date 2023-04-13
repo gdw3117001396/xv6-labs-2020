@@ -77,7 +77,7 @@ ukvminit(){
   ukvmmap(kpagetable, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
   return kpagetable;
 }
-
+// 为用户内核进程映射页表
 void
 ukvmmap(pagetable_t kpagetable, uint64 va, uint64 pa, uint64 sz, int perm){
   if(mappages(kpagetable, va, sz, pa, perm) != 0){
@@ -92,7 +92,7 @@ void vmprint_helper(pagetable_t pagetable, uint64 level){
     if (pte & PTE_V){
       uint64 child = PTE2PA(pte);
       printf("%s%d: pte %p pa %p\n", buf[2 - level], i, pte, child);
-      if (level > 0){  //  (pte & (PTE_R|PTE_W|PTE_X)) == 0) 判断是否不在最后一层。因为最后一层页表中页表项中W位，R位，X位起码有一位会被设置为1
+      if ((pte & (PTE_R|PTE_W|PTE_X)) == 0){  //  (pte & (PTE_R|PTE_W|PTE_X)) == 0) 判断是否不在最后一层。因为最后一层页表中页表项中W位，R位，X位起码有一位会被设置为1
         vmprint_helper((pagetable_t)child, level - 1);
       }
     }

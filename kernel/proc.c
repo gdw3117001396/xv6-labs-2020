@@ -121,7 +121,7 @@ found:
     release(&p->lock);
     return 0;
   }
-  
+  // 在创建进程时，创建进程的内核页表
   p->kpagetable = ukvminit();
   if(p->pagetable == 0){
     freeproc(p);
@@ -129,7 +129,7 @@ found:
     return 0;
   }
 
-  // 设置内核栈
+  // 在创建进程时，创建进程时设置内核栈，原来时在procinit中设置的
   char *pa = kalloc();
   if(pa == 0)
     panic("kalloc");
@@ -171,8 +171,11 @@ freeproc(struct proc *p)
   p->trapframe = 0;
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
+  
+  // 释放内核栈，当时分配的时候就是1页，释放的时候也是一页
   uvmunmap(p->kpagetable, p->kstack, 1, 1);
   p->kstack = 0;
+  // 释放内核页表
   freekpagetable(p->kpagetable);
   p->pagetable = 0;
   p->sz = 0;
@@ -506,10 +509,10 @@ scheduler(void)
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
-        proc_ukvminithart(p->kpagetable);
-        swtch(&c->context, &p->context);
+        proc_ukvminithart(p->kpagetable); // 切换进程时将切换到对应进程的内核页表
+        swtch(&c->context, &p->context);  
 
-        kvminithart();
+        kvminithart(); // 在无进程CPU时要切换回原来的全局内核页表
         // Process is done running for now.
         // It should have changed its p->state before coming back.
         c->proc = 0;
