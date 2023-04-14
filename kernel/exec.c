@@ -74,7 +74,8 @@ exec(char *path, char **argv) // 它使用一个存储在文件系统中的文�
   uvmclear(pagetable, sz-2*PGSIZE);
   sp = sz;
   stackbase = sp - PGSIZE;
-
+  // 这是复制pagetable，不然就会造成在在user_init那里无限循环scheduler
+  u2kvmcopy(pagetable, p->kpagetable, 0, sz);
   // Push argument strings, prepare rest of stack in ustack.分配一个栈页面。exec一次将参数中的一个字符串复制到栈顶，并在ustack中记录指向它们的指针。
   for(argc = 0; argv[argc]; argc++) {
     if(argc >= MAXARG)

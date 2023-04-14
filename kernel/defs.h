@@ -182,7 +182,9 @@ void            vmprint(pagetable_t);
 pagetable_t     ukvminit(); // 为进程创建内核页表
 void            proc_ukvminithart();
 void            ukvmmap();
-
+void            u2kvmcopy(pagetable_t, pagetable_t, uint64, uint64);
+int             copyin_new(pagetable_t, char *, uint64, uint64);
+int             copyinstr_new(pagetable_t, char *, uint64, uint64);
 // plic.c
 void            plicinit(void);
 void            plicinithart(void);
