@@ -109,8 +109,6 @@ sys_sigalarm(void)
   if(argaddr(1, &handler) < 0){
     return -1;
   }
-  printf("ticks:%d\n", ticks);
-  printf("handler:%p\n", handler);
   p->ticks = ticks;
   p->handler = handler;
   p->ticks_cnt = 0;

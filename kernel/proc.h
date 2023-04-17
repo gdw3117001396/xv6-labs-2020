@@ -103,10 +103,10 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
-  int ticks;                   // 
-  uint64 handler;
-  int handler_doing;
-  int ticks_cnt;                    // 跟踪自上一次调用（或直到下一次调用）到进程的报警处理程序间经历了多少滴答
+  int ticks;                   // 时钟滴答 
+  uint64 handler;              // 中断处理函数地址
+  int handler_doing;           // 当前是否正在中断处理
+  int ticks_cnt;               // 跟踪自上一次调用（或直到下一次调用）到进程的报警处理程序间经历了多少滴答
   uint64 pre_epc;
   /*  40 */ uint64 pre_ra;
   /*  48 */ uint64 pre_sp;

@@ -120,6 +120,8 @@ usertrap(void)
       if (p->ticks_cnt > p->ticks && p->handler_doing == 0) {
         p->ticks_cnt = 0;
         store_register();
+        // 这样做的目的是为了在恢复到user mode的时候，程序可以运行handler
+        //因为恢复到user mode的时候，epc会赋给pc，而程序正是根据pc来执行的，所以才需要保存epc的问题，来恢复现场
         p->trapframe->epc = p->handler; 
         p->handler_doing = 1;
       }
