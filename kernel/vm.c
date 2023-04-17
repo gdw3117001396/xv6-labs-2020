@@ -77,6 +77,47 @@ ukvminit(){
   ukvmmap(kpagetable, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
   return kpagetable;
 }
+//lecture:7 share方法
+pagetable_t
+kvmcreate()
+{
+  pagetable_t pagetable;
+  int i;
+  pagetable = uvmcreate();
+  //为什么用可以拷贝1-511号条目，因为kernbase >> 12 + 9 + 9 就是2, 下面内容其实都在条目0
+  for (i = 1; i < 512; ++i) {
+    pagetable[i] = kernel_pagetable[i];
+  }
+  // uart registers
+  ukvmmap(pagetable, UART0, UART0, PGSIZE, PTE_R | PTE_W);
+
+  // virtio mmio disk interface
+  ukvmmap(pagetable, VIRTIO0, VIRTIO0, PGSIZE, PTE_R | PTE_W);
+
+  // CLINT
+  ukvmmap(pagetable, CLINT, CLINT, 0x10000, PTE_R | PTE_W);
+
+  // PLIC
+  ukvmmap(pagetable, PLIC, PLIC, 0x400000, PTE_R | PTE_W);
+  return pagetable;
+}
+//lecture:7 share方法
+void 
+kvmfree(pagetable_t kpagetable, uint64 sz)
+{
+  pte_t pte = kpagetable[0];
+  pagetable_t level1 = (pagetable_t) PTE2PA(pte);
+  for (int i = 0; i < 512; ++i) {
+    pte_t pte = level1[i];
+    if (pte & PTE_V) {
+      uint64 leve2 = PTE2PA(pte);
+      kfree((void *) leve2);
+      level1[i] = 0;
+    }
+  }
+  kfree((void *) level1);
+  kfree((void *) kernel_pagetable);
+}
 // 为用户内核进程映射页表
 void
 ukvmmap(pagetable_t kpagetable, uint64 va, uint64 pa, uint64 sz, int perm){
@@ -412,6 +453,9 @@ u2kvmcopy(pagetable_t pagetable, pagetable_t kpagetable, uint64 oldsz, uint64 ne
     uint64 pa = PTE2PA(*pte_from);
     uint flags = (PTE_FLAGS(*pte_from)) & (~PTE_U);
     *pte_to = PA2PTE(pa) | flags;
+    // lecture7:share
+    // *pte_to = *pte_from;
+    // *pte_to &= ~(PTE_U | PTE_W | PTE_X);
   }
 }
 

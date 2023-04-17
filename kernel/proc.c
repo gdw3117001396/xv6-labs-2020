@@ -121,6 +121,10 @@ found:
     release(&p->lock);
     return 0;
   }
+
+  //lecture:7 share方法
+  // p->kpagetable = kvmcreate();
+  
   // 在创建进程时，创建进程的内核页表
   p->kpagetable = ukvminit();
   if(p->pagetable == 0){
