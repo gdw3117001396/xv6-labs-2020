@@ -100,11 +100,59 @@ sys_uptime(void)
 uint64
 sys_sigalarm(void)
 {
-
+  int ticks;
+  uint64 handler;
+  struct proc *p = myproc();
+  if (argint(0, &ticks) < 0) {
+    return -1;
+  }
+  if(argaddr(1, &handler) < 0){
+    return -1;
+  }
+  printf("ticks:%d\n", ticks);
+  printf("handler:%p\n", handler);
+  p->ticks = ticks;
+  p->handler = handler;
+  p->ticks_cnt = 0;
+  return 0;
 }
 
 uint64
 sys_sigreturn(void)
 {
-  
+  struct proc *p = myproc();
+  p->trapframe->epc = p->pre_epc;
+  p->trapframe->a0 = p->pre_a0;
+  p->trapframe->a1 = p->pre_a1;
+  p->trapframe->a2 = p->pre_a2;
+  p->trapframe->a3 = p->pre_a3;
+  p->trapframe->a4 = p->pre_a4;
+  p->trapframe->a5 = p->pre_a5;
+  p->trapframe->a6 = p->pre_a6;
+  p->trapframe->a7 = p->pre_a7;
+  p->trapframe->gp = p->pre_gp;
+  p->trapframe->ra = p->pre_ra;
+  p->trapframe->s0 = p->pre_s0;
+  p->trapframe->s1 = p->pre_s1;
+  p->trapframe->s2 = p->pre_s2;
+  p->trapframe->s3 = p->pre_s3;
+  p->trapframe->s4 = p->pre_s4;
+  p->trapframe->s5 = p->pre_s5;
+  p->trapframe->s6 = p->pre_s6;
+  p->trapframe->s7 = p->pre_s7;
+  p->trapframe->s8 = p->pre_s8;
+  p->trapframe->s9 = p->pre_s9;
+  p->trapframe->s10 = p->pre_s10;
+  p->trapframe->s11 = p->pre_s11;
+  p->trapframe->sp = p->pre_sp;
+  p->trapframe->t0 = p->pre_t0;
+  p->trapframe->t1 = p->pre_t1;
+  p->trapframe->t2 = p->pre_t2;
+  p->trapframe->t3 = p->pre_t3;
+  p->trapframe->t4 = p->pre_t4;
+  p->trapframe->t5 = p->pre_t5;
+  p->trapframe->t6 = p->pre_t6;
+  p->trapframe->tp = p->pre_tp;
+  p->handler_doing = 0;
+  return 0;
 }

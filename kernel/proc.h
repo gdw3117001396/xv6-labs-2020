@@ -103,6 +103,40 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
-  int ticks;
-  void (*handler)();
+  int ticks;                   // 
+  uint64 handler;
+  int handler_doing;
+  int ticks_cnt;                    // 跟踪自上一次调用（或直到下一次调用）到进程的报警处理程序间经历了多少滴答
+  uint64 pre_epc;
+  /*  40 */ uint64 pre_ra;
+  /*  48 */ uint64 pre_sp;
+  /*  56 */ uint64 pre_gp;
+  /*  64 */ uint64 pre_tp;
+  /*  72 */ uint64 pre_t0;
+  /*  80 */ uint64 pre_t1;
+  /*  88 */ uint64 pre_t2;
+  /*  96 */ uint64 pre_s0;
+  /* 104 */ uint64 pre_s1;
+  /* 112 */ uint64 pre_a0;
+  /* 120 */ uint64 pre_a1;
+  /* 128 */ uint64 pre_a2;
+  /* 136 */ uint64 pre_a3;
+  /* 144 */ uint64 pre_a4;
+  /* 152 */ uint64 pre_a5;
+  /* 160 */ uint64 pre_a6;
+  /* 168 */ uint64 pre_a7;
+  /* 176 */ uint64 pre_s2;
+  /* 184 */ uint64 pre_s3;
+  /* 192 */ uint64 pre_s4;
+  /* 200 */ uint64 pre_s5;
+  /* 208 */ uint64 pre_s6;
+  /* 216 */ uint64 pre_s7;
+  /* 224 */ uint64 pre_s8;
+  /* 232 */ uint64 pre_s9;
+  /* 240 */ uint64 pre_s10;
+  /* 248 */ uint64 pre_s11;
+  /* 256 */ uint64 pre_t3;
+  /* 264 */ uint64 pre_t4;
+  /* 272 */ uint64 pre_t5;
+  /* 280 */ uint64 pre_t6;
 };

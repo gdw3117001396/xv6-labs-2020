@@ -29,6 +29,43 @@ trapinithart(void)
   w_stvec((uint64)kernelvec);
 }
 
+void 
+store_register(void)
+{
+  struct proc *p = myproc();
+  p->pre_epc = p->trapframe->epc;
+  p->pre_a0 = p->trapframe->a0;
+  p->pre_a1 = p->trapframe->a1;
+  p->pre_a2 = p->trapframe->a2;
+  p->pre_a3 = p->trapframe->a3;
+  p->pre_a4 = p->trapframe->a4;
+  p->pre_a5 = p->trapframe->a5;
+  p->pre_a6 = p->trapframe->a6;
+  p->pre_a7 = p->trapframe->a7;
+  p->pre_gp = p->trapframe->gp;
+  p->pre_ra = p->trapframe->ra;
+  p->pre_s0 = p->trapframe->s0;
+  p->pre_s1 = p->trapframe->s1;
+  p->pre_s2 = p->trapframe->s2;
+  p->pre_s3 = p->trapframe->s3;
+  p->pre_s4 = p->trapframe->s4;
+  p->pre_s5 = p->trapframe->s5;
+  p->pre_s6 = p->trapframe->s6;
+  p->pre_s7 = p->trapframe->s7;
+  p->pre_s8 = p->trapframe->s8;
+  p->pre_s9 = p->trapframe->s9;
+  p->pre_s10 = p->trapframe->s10;
+  p->pre_s11 = p->trapframe->s11;
+  p->pre_sp = p->trapframe->sp;
+  p->pre_t0 = p->trapframe->t0;
+  p->pre_t1 = p->trapframe->t1;
+  p->pre_t2 = p->trapframe->t2;
+  p->pre_t3 = p->trapframe->t3;
+  p->pre_t4 = p->trapframe->t4;
+  p->pre_t5 = p->trapframe->t5;
+  p->pre_t6 = p->trapframe->t6;
+  p->pre_tp = p->trapframe->tp;
+}
 //
 // handle an interrupt, exception, or system call from user space.
 // called from trampoline.S
@@ -77,8 +114,18 @@ usertrap(void)
     exit(-1);
 
   // give up the CPU if this is a timer interrupt.
-  if(which_dev == 2)
+  if(which_dev == 2){
+    if (p->ticks > 0) {
+      ++p->ticks_cnt;
+      if (p->ticks_cnt > p->ticks && p->handler_doing == 0) {
+        p->ticks_cnt = 0;
+        store_register();
+        p->trapframe->epc = p->handler; 
+        p->handler_doing = 1;
+      }
+    }
     yield();
+  }
 
   usertrapret();
 }
