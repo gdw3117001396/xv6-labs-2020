@@ -32,7 +32,7 @@ trapinithart(void)
 //
 // handle an interrupt, exception, or system call from user space.
 // called from trampoline.S
-//
+// 确定陷阱的原因，处理并返回
 void
 usertrap(void)
 {
@@ -42,12 +42,12 @@ usertrap(void)
     panic("usertrap: not from user mode");
 
   // send interrupts and exceptions to kerneltrap(),
-  // since we're now in the kernel.
+  // since we're now in the kernel.改变stvec，这样内核中的陷阱将由kernelvec处理
   w_stvec((uint64)kernelvec);
 
   struct proc *p = myproc();
   
-  // save user program counter.
+  // save user program counter.保存的用户程序计数器
   p->trapframe->epc = r_sepc();
   
   if(r_scause() == 8){
@@ -129,7 +129,7 @@ usertrapret(void)
 }
 
 // interrupts and exceptions from kernel code go here via kernelvec,
-// on whatever the current kernel stack is.
+// on whatever the current kernel stack is.为两种类型的陷阱做好了准备：设备中断和异常。
 void 
 kerneltrap()
 {

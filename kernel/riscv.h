@@ -53,7 +53,8 @@ r_sstatus()
   asm volatile("csrr %0, sstatus" : "=r" (x) );
   return x;
 }
-
+// 其中的SIE位控制设备中断是否启用。如果内核清空SIE，RISC-V将推迟设备中断，直到内核重新设置SIE。
+//SPP位指示陷阱是来自用户模式还是管理模式，并控制sret返回的模式。
 static inline void 
 w_sstatus(uint64 x)
 {
@@ -113,7 +114,7 @@ w_mie(uint64 x)
 
 // machine exception program counter, holds the
 // instruction address to which a return from
-// exception will go.
+// exception will go. 当发生陷阱时，RISC-V会在这里保存程序计数器pc
 static inline void 
 w_sepc(uint64 x)
 {
@@ -159,7 +160,7 @@ w_mideleg(uint64 x)
 }
 
 // Supervisor Trap-Vector Base Address
-// low two bits are mode.
+// low two bits are mode. 内核在这里写入其陷阱处理程序的地址；RISC-V跳转到这里处理陷阱。
 static inline void 
 w_stvec(uint64 x)
 {
@@ -202,7 +203,7 @@ r_satp()
   return x;
 }
 
-// Supervisor Scratch register, for early trap handler in trampoline.S.
+// Supervisor Scratch register, for early trap handler in trampoline.S. 内核在这里放置了一个值，这个值在陷阱处理程序一开始就会派上用场。
 static inline void 
 w_sscratch(uint64 x)
 {
@@ -215,7 +216,7 @@ w_mscratch(uint64 x)
   asm volatile("csrw mscratch, %0" : : "r" (x));
 }
 
-// Supervisor Trap Cause
+// Supervisor Trap Cause  RISC-V在这里放置一个描述陷阱原因的数字。
 static inline uint64
 r_scause()
 {
