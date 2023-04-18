@@ -224,7 +224,7 @@ r_scause()
   return x;
 }
 
-// Supervisor Trap Value
+// Supervisor Trap Value (page fault时返回的时虚拟内存的地址)
 static inline uint64
 r_stval()
 {
