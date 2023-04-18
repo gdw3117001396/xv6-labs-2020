@@ -68,6 +68,26 @@ int
 argaddr(int n, uint64 *ip)
 {
   *ip = argraw(n);
+  struct proc *p = myproc();
+  if (walkaddr(p->pagetable, *ip) == 0) {
+    // 不处于guard page 和 高于p->sz的地方
+    if ((*ip <= PGROUNDDOWN(p->trapframe->sp) && *ip >= PGROUNDDOWN(p->trapframe->sp) - PGSIZE) || *ip >= p->sz) {
+      return -1;
+    } else {
+      uint64 ka = (uint64) kalloc(); // 分配物理内存
+      if (ka == 0) {
+        return -1;
+      } else {
+        memset((void *)ka, 0, PGSIZE);
+        *ip = PGROUNDDOWN(*ip);
+        // 将虚拟页面映射到物理页面
+        if (mappages(p->pagetable, *ip, PGSIZE, ka,  PTE_R | PTE_W | PTE_X | PTE_U) != 0) {
+          kfree((void *)ka);
+          return -1;
+        }
+      }
+    }
+  }
   return 0;
 }
 

@@ -49,7 +49,7 @@ usertrap(void)
   
   // save user program counter.
   p->trapframe->epc = r_sepc();
-  
+
   if(r_scause() == 8){
     // system call
 
@@ -67,19 +67,23 @@ usertrap(void)
     syscall();
   } else if((which_dev = devintr()) != 0){
     // ok
-  } else if (r_scause() == 15 )  {
+  } else if (r_scause() == 15 || r_scause() == 13)  {
     uint64 va = r_stval();
-    printf("page fault %p\n", va);
-    uint64 ka = (uint64) kalloc(); // 分配物理内存
-    if (ka == 0) {
+    // 处于guard page 和 高于p->sz的地方
+    if ((va <= PGROUNDDOWN(p->trapframe->sp) && va >= PGROUNDDOWN(p->trapframe->sp) - PGSIZE) || va >= p->sz) {
       p->killed = 1;
     } else {
-      memset((void *)ka, 0, PGSIZE);
-      va = PGROUNDDOWN(va);
-      // 将虚拟页面映射到物理页面
-      if (mappages(p->pagetable, va, PGSIZE, ka, PTE_W|PTE_R|PTE_U) != 0) {
-        kfree((void *)ka);
+      uint64 ka = (uint64) kalloc(); // 分配物理内存
+      if (ka == 0) {
         p->killed = 1;
+      } else {
+        memset((void *)ka, 0, PGSIZE);
+        va = PGROUNDDOWN(va);
+        // 将虚拟页面映射到物理页面
+        if (mappages(p->pagetable, va, PGSIZE, ka,  PTE_R | PTE_W | PTE_X | PTE_U) != 0) {
+          kfree((void *)ka);
+          p->killed = 1;
+        }
       }
     }
   } else {
