@@ -181,7 +181,7 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
 
   for(a = va; a < va + npages*PGSIZE; a += PGSIZE){
     if((pte = walk(pagetable, a, 0)) == 0){
-      continue;
+      continue; // 解除映射时，有一些页面是处于未分配的状态的，所以直接跳过就好了
       // panic("uvmunmap: walk");
     }
     if((*pte & PTE_V) == 0){
@@ -319,11 +319,11 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
 
   for(i = 0; i < sz; i += PGSIZE){
     if((pte = walk(old, i, 0)) == 0){
-      continue;
+      continue; // 由于懒分配并不是真正的缺失
       // panic("uvmcopy: pte should exist");
     }
     if((*pte & PTE_V) == 0){
-      continue;
+      continue; // 由于懒分配并不是真正的缺失
       // panic("uvmcopy: page not present");
     }
     pa = PTE2PA(*pte);
