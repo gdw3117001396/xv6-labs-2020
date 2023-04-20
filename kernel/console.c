@@ -133,7 +133,7 @@ consoleread(int user_dst, uint64 dst, int n)
 // uartintr() calls this for input character.
 // do erase/kill processing, append to cons.buf,
 // wake up consoleread() if a whole line has arrived.
-//
+// 在cons.buf中积累输入字符，直到一整行到达。
 void
 consoleintr(int c)
 {

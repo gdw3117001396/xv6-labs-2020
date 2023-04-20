@@ -67,6 +67,31 @@ usertrap(void)
     syscall();
   } else if((which_dev = devintr()) != 0){
     // ok
+  } else if (r_scause() == 13 || r_scause() == 15) {
+    uint64 va = r_stval();
+    if ((va >= p->sz) || is_cow_fault(p->pagetable, va) != 0 
+        || cow_alloc(p->pagetable, PGROUNDDOWN(va)) == 0){
+        p->killed = 1;
+    }
+    /*pte_t *pte;
+    if ((pte = walk(p->pagetable, va, 0)) == 0) {
+      if (*pte & PTE_COW) {
+        printf("cow成功了");
+        char *mem = kalloc();
+        // uint64 pa = PTE2PA(*pte);
+        if (mem == 0) {
+          p->killed = 1;
+        } else {
+          
+        }
+      } else {
+        p->killed = 1;
+        printf("cow失败了");
+      }
+    } else {
+      printf("pte失败了\n");
+      p->killed = 1;
+    }*/
   } else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
@@ -202,7 +227,7 @@ devintr()
     return 1;
   } else if(scause == 0x8000000000000001L){
     // software interrupt from a machine-mode timer interrupt,
-    // forwarded by timervec in kernelvec.S.
+    // forwarded by timervec in kernelvec.S.  处理由定时器中断产生的软件中断的代码
 
     if(cpuid() == 0){
       clockintr();

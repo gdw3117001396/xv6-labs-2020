@@ -35,7 +35,7 @@ acquire(struct spinlock *lk)
   // Tell the C compiler and the processor to not move loads or stores
   // past this point, to ensure that the critical section's memory
   // references happen strictly after the lock is acquired.
-  // On RISC-V, this emits a fence instruction.
+  // On RISC-V, this emits a fence instruction. // 一个内存障碍：它告诉编译器和CPU不要跨障碍重新排序load或store指令
   __sync_synchronize();
 
   // Record info about lock acquisition for holding() and debugging.
