@@ -494,7 +494,7 @@ cow_alloc(pagetable_t pagetable, uint64 va) {
     flag |= PTE_W;
     flag &= ~(PTE_COW);
     memmove(mem, (char *)pa, PGSIZE);
-    // 先解除原来的映射，很重要
+    // 先解除原来的映射，很重要,里面有kree引用计数已经减一了
     uvmunmap(pagetable, va, 1, 1);
     if (mappages(pagetable, va, PGSIZE, (uint64)mem, flag) < 0) {
       kfree(mem);
