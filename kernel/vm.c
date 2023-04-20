@@ -336,7 +336,7 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
     if(mappages(new, i, PGSIZE, (uint64)pa, flags) != 0) {
       goto err;
     }
-    kaddrefcnt((char *)pa);
+    kaddrefcnt((void *)pa); // 增加引用计数
   }
   return 0;
 
@@ -369,7 +369,7 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
   while(len > 0){
     va0 = PGROUNDDOWN(dstva);
     pa0 = walkaddr(pagetable, va0);
-    if (is_cow_fault(pagetable, va0) == 0) {
+    if (is_cow_fault(pagetable, va0) == 1) {
       pa0 = (uint64)cow_alloc(pagetable, va0);
     }
     if(pa0 == 0)
@@ -454,49 +454,52 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
   }
 }
 
-int is_cow_fault(pagetable_t pagetable, uint64 va) {
+int 
+is_cow_fault(pagetable_t pagetable, uint64 va) {
   if (va >= MAXVA) {
-    return -1;
+    return 0;
   }
   pte_t *pte = walk(pagetable, va, 0);
   if(pte == 0)
-    return -1;
-  if((*pte & PTE_V) == 0)
-    return -1;
-  if((*pte & PTE_U) == 0)
-    return -1;
-  if (*pte & PTE_COW) {
     return 0;
+  if((*pte & PTE_V) == 0)
+    return 0;
+  if((*pte & PTE_U) == 0)
+    return 0;
+
+  if (*pte & PTE_COW) {
+    return 1;
   }
-  return -1;
+  return 0;
 }
 
-void* cow_alloc(pagetable_t pagetable, uint64 va) {
+void* 
+cow_alloc(pagetable_t pagetable, uint64 va) {
   va = PGROUNDDOWN(va);
   pte_t *pte = walk(pagetable, va, 0);
   uint64 pa = PTE2PA(*pte);
-  int flag = PTE_FLAGS(*pte);
-  flag &= ~(PTE_COW);
-  flag |= PTE_W;
-  
-  if (krefcnt((char *)pa) == 1) {
+
+  // 如果只有只剩下一个的话就直接变为可写，然后除掉COW位即可
+  if (krefcnt((void *)pa) == 1) {
     *pte |= PTE_W;
     *pte &= ~PTE_COW;
     return (void *)pa;
   } else {
+    // 重新分配物理内存空间
     char *mem = kalloc();
     if (mem == 0) {
       return 0;
     }
+    int flag = PTE_FLAGS(*pte);
+    flag |= PTE_W;
+    flag &= ~(PTE_COW);
     memmove(mem, (char *)pa, PGSIZE);
+    // 先解除原来的映射，很重要
     uvmunmap(pagetable, va, 1, 1);
-    // *pte &= ~PTE_V;
     if (mappages(pagetable, va, PGSIZE, (uint64)mem, flag) < 0) {
       kfree(mem);
-      // *pte |= PTE_V;
       return 0;
     }
-    // kfree((char *)PGROUNDDOWN(pa));
     return mem;
   }
 }
