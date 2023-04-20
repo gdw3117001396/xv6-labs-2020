@@ -489,13 +489,14 @@ void* cow_alloc(pagetable_t pagetable, uint64 va) {
       return 0;
     }
     memmove(mem, (char *)pa, PGSIZE);
-    *pte &= ~PTE_V;
+    uvmunmap(pagetable, va, 1, 1);
+    // *pte &= ~PTE_V;
     if (mappages(pagetable, va, PGSIZE, (uint64)mem, flag) < 0) {
       kfree(mem);
-      *pte |= PTE_V;
+      // *pte |= PTE_V;
       return 0;
     }
-    kfree((char *)PGROUNDDOWN(pa));
+    // kfree((char *)PGROUNDDOWN(pa));
     return mem;
   }
 }
