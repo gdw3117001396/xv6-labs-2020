@@ -46,7 +46,7 @@ procinit(void)
 
 // Must be called with interrupts disabled,
 // to prevent race with process being moved
-// to a different CPU.
+// to a different CPU. Xv6确保每个CPU的hartid在内核中存储在该CPU的tp寄存器中
 int
 cpuid()
 {
@@ -55,7 +55,7 @@ cpuid()
 }
 
 // Return this CPU's cpu struct.
-// Interrupts must be disabled.
+// Interrupts must be disabled. // Xv6确保每个CPU的hartid在内核中存储在该CPU的tp寄存器中
 struct cpu*
 mycpu(void) {
   int id = cpuid();
@@ -497,7 +497,7 @@ scheduler(void)
 // kernel thread, not this CPU. It should
 // be proc->intena and proc->noff, but that would
 // break in the few places where a lock is held but
-// there's no process.
+// there's no process. 释放CPU
 void
 sched(void)
 {
@@ -572,7 +572,7 @@ sleep(void *chan, struct spinlock *lk)
   p->chan = chan;
   p->state = SLEEPING;
 
-  sched();
+  sched(); // 释放cpu
 
   // Tidy up.
   p->chan = 0;
