@@ -562,7 +562,7 @@ sleep(void *chan, struct spinlock *lk)
   // Once we hold p->lock, we can be
   // guaranteed that we won't miss any wakeup
   // (wakeup locks p->lock),
-  // so it's okay to release lk.
+  // so it's okay to release lk.  要进入睡眠的进程现在同时持有p->lock和lk
   if(lk != &p->lock){  //DOC: sleeplock0
     acquire(&p->lock);  //DOC: sleeplock1
     release(lk);
@@ -572,7 +572,7 @@ sleep(void *chan, struct spinlock *lk)
   p->chan = chan;
   p->state = SLEEPING;
 
-  sched();
+  sched(); // 放弃CPU，运行别的进程去了，等到再次调度到的时候再回来
 
   // Tidy up.
   p->chan = 0;
@@ -585,7 +585,7 @@ sleep(void *chan, struct spinlock *lk)
 }
 
 // Wake up all processes sleeping on chan.
-// Must be called without any p->lock.
+// Must be called without any p->lock. 唤醒在chan上所有处于sleeping状态的线程
 void
 wakeup(void *chan)
 {

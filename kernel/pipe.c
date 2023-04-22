@@ -85,13 +85,13 @@ pipewrite(struct pipe *pi, uint64 addr, int n)
 
   acquire(&pi->lock);
   for(i = 0; i < n; i++){
-    while(pi->nwrite == pi->nread + PIPESIZE){  //DOC: pipewrite-full
-      if(pi->readopen == 0 || pr->killed){
+    while(pi->nwrite == pi->nread + PIPESIZE){  //DOC: pipewrite-full 此时管道写满了
+      if(pi->readopen == 0 || pr->killed){  // 管道读端关闭或者进程即将死亡
         release(&pi->lock);
         return -1;
       }
-      wakeup(&pi->nread);
-      sleep(&pi->nwrite, &pi->lock);
+      wakeup(&pi->nread);  // 唤醒pi->nread这条chan上的线程让他读
+      sleep(&pi->nwrite, &pi->lock); // 自己休眠在pi->nwrite这条chan上
     }
     if(copyin(pr->pagetable, &ch, addr + i, 1) == -1)
       break;
@@ -110,12 +110,12 @@ piperead(struct pipe *pi, uint64 addr, int n)
   char ch;
 
   acquire(&pi->lock);
-  while(pi->nread == pi->nwrite && pi->writeopen){  //DOC: pipe-empty
+  while(pi->nread == pi->nwrite && pi->writeopen){  //DOC: pipe-empty  管道里面没有数据
     if(pr->killed){
       release(&pi->lock);
       return -1;
     }
-    sleep(&pi->nread, &pi->lock); //DOC: piperead-sleep
+    sleep(&pi->nread, &pi->lock); //DOC: piperead-sleep  读端休眠在pi->nread这条管道上
   }
   for(i = 0; i < n; i++){  //DOC: piperead-copy
     if(pi->nread == pi->nwrite)
