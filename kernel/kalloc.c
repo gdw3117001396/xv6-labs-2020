@@ -31,7 +31,7 @@ kinit()
   for (int i = 0; i < NCPU; ++i) {
     char name[6];
     snprintf(name, 6, "kmem-%d", i);
-    printf("%s\n", name);
+    // printf("%s\n", name);
     initlock(&kmems[i].lock, name);
   }
   freerange(end, (void*)PHYSTOP);

@@ -33,6 +33,8 @@ struct {
   struct buf head;
 } bcache;
 
+
+
 void
 binit(void)
 {
@@ -62,7 +64,7 @@ bget(uint dev, uint blockno)
 
   acquire(&bcache.lock);
 
-  // Is the block already cached?
+  // Is the block already cached? 在cache中找到了buf，获取睡眠锁
   for(b = bcache.head.next; b != &bcache.head; b = b->next){
     if(b->dev == dev && b->blockno == blockno){
       b->refcnt++;
@@ -72,7 +74,7 @@ bget(uint dev, uint blockno)
     }
   }
 
-  // Not cached.
+  // Not cached. 如果在cache中找不到，从LRU里面找
   // Recycle the least recently used (LRU) unused buffer.
   for(b = bcache.head.prev; b != &bcache.head; b = b->prev){
     if(b->refcnt == 0) {
@@ -96,23 +98,23 @@ bread(uint dev, uint blockno)
 
   b = bget(dev, blockno);
   if(!b->valid) {
-    virtio_disk_rw(b, 0);
+    virtio_disk_rw(b, 0); // 0表示读入
     b->valid = 1;
   }
   return b;
 }
 
-// Write b's contents to disk.  Must be locked.
+// Write b's contents to disk.  Must be locked. 将修改后的缓冲区写到磁盘的相应块上，必须持有锁
 void
 bwrite(struct buf *b)
 {
   if(!holdingsleep(&b->lock))
     panic("bwrite");
-  virtio_disk_rw(b, 1);
+  virtio_disk_rw(b, 1); // 1表示写入
 }
 
 // Release a locked buffer.
-// Move to the head of the most-recently-used list.
+// Move to the head of the most-recently-used list. 
 void
 brelse(struct buf *b)
 {
