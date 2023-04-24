@@ -129,6 +129,7 @@ bget(uint dev, uint blockno)
       }
     }
   }
+  panic("bget: no buffers");
   /*for(b = bcache.head.prev; b != &bcache.head; b = b->prev){
     if(b->refcnt == 0) {
       b->dev = dev;
@@ -140,7 +141,6 @@ bget(uint dev, uint blockno)
       return b;
     }
   }*/
-  panic("bget: no buffers");
 }
 
 // Return a locked buf with the contents of the indicated block.

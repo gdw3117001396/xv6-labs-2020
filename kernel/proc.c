@@ -562,7 +562,7 @@ sleep(void *chan, struct spinlock *lk)
   // Once we hold p->lock, we can be
   // guaranteed that we won't miss any wakeup
   // (wakeup locks p->lock),
-  // so it's okay to release lk.  要进入睡眠的进程现在同时持有p->lock和lk
+  // so it's okay to release lk.  要进入睡眠的进程现在同时持有p->lock和lk,睡眠的时候会释放lk锁
   if(lk != &p->lock){  //DOC: sleeplock0
     acquire(&p->lock);  //DOC: sleeplock1
     release(lk);
@@ -577,7 +577,7 @@ sleep(void *chan, struct spinlock *lk)
   // Tidy up.
   p->chan = 0;
 
-  // Reacquire original lock.
+  // Reacquire original lock. 醒来的时候要获取锁
   if(lk != &p->lock){
     release(&p->lock);
     acquire(lk);
@@ -592,7 +592,7 @@ wakeup(void *chan)
   struct proc *p;
 
   for(p = proc; p < &proc[NPROC]; p++) {
-    acquire(&p->lock);
+    acquire(&p->lock); // 先获取进程锁才可以wakeup,确保不会lost wakeup
     if(p->state == SLEEPING && p->chan == chan) {
       p->state = RUNNABLE;
     }
