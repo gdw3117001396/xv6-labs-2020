@@ -237,7 +237,9 @@ bad:
   end_op();
   return -1;
 }
-
+// 为新inode创建一个新名称。
+// 从调用nameiparent开始，以获取父目录的inode。然后调用dirlookup检查名称是否已经存在
+//如果名称确实存在，create的行为取决于它用于哪个系统调用, 返回已加锁的inode
 static struct inode*
 create(char *path, short type, short major, short minor)
 {
@@ -322,6 +324,36 @@ sys_open(void)
     return -1;
   }
 
+  // 处理符号链接
+  if(ip->type == T_SYMLINK && !(omode & O_NOFOLLOW)) {
+    // 若符号链接指向的仍然是符号链接，则递归的跟随它
+    // 直到找到真正指向的文件
+    // 但深度不能超过MAX_SYMLINK_DEPTH
+    for(int i = 0; i < MAX_SYMLINK_DEPTH; ++i) {
+      // 读出符号链接指向的路径
+      if(readi(ip, 0, (uint64)path, 0, MAXPATH) != MAXPATH) {
+        iunlockput(ip);
+        end_op();
+        return -1;
+      }
+      iunlockput(ip);
+      ip = namei(path);
+      if(ip == 0) {
+        end_op();
+        return -1;
+      }
+      ilock(ip);
+      if(ip->type != T_SYMLINK)
+        break;
+    }
+    // 超过最大允许深度后仍然为符号链接，则返回错误
+    if(ip->type == T_SYMLINK) {
+      iunlockput(ip);
+      end_op();
+      return -1;
+    }
+  }
+  
   if((f = filealloc()) == 0 || (fd = fdalloc(f)) < 0){
     if(f)
       fileclose(f);
@@ -482,5 +514,33 @@ sys_pipe(void)
     fileclose(wf);
     return -1;
   }
+  return 0;
+}
+
+uint64
+sys_symlink(void)
+{
+  char target[MAXPATH];
+  char path[MAXPATH];
+  struct inode *ip;
+  int n_target, n_path;
+  if((n_target = argstr(0, target, MAXPATH)) < 0 || (n_path = argstr(1, path, MAXPATH)) < 0)
+    return -1;
+
+  begin_op();
+  // 分配一个inode结点，create返回锁定的inode
+  if((ip = create(path, T_SYMLINK, 0, 0)) == 0) {
+    end_op();
+    return -1;
+  }
+  // 向inode数据块中写入target路径
+  if(writei(ip, 0, (uint64)target, 0, MAXPATH) < MAXPATH) {
+    iunlockput(ip);
+    end_op();
+    return -1;
+  }
+  // ip->sym_name = path_target;
+  iunlockput(ip);
+  end_op();
   return 0;
 }

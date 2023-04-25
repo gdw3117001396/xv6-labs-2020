@@ -122,7 +122,7 @@ recover_from_log(void)
   write_head(); // clear the log
 }
 
-// called at the start of each FS system call.
+// called at the start of each FS system call.等待直到日志系统当前未处于提交中，并且直到有足够的未被占用的日志空间来保存此调用的写入
 void
 begin_op(void)
 {
@@ -131,10 +131,10 @@ begin_op(void)
     if(log.committing){
       sleep(&log, &log.lock);
     } else if(log.lh.n + (log.outstanding+1)*MAXOPBLOCKS > LOGSIZE){
-      // this op might exhaust log space; wait for commit.
+      // this op might exhaust log space; wait for commit. 直到有足够的未被占用的日志空间来保存此调用的写入
       sleep(&log, &log.lock);
     } else {
-      log.outstanding += 1;
+      log.outstanding += 1; // 统计预定了日志空间的系统调用数
       release(&log.lock);
       break;
     }
@@ -194,11 +194,11 @@ static void
 commit()
 {
   if (log.lh.n > 0) {
-    write_log();     // Write modified blocks from cache to log
-    write_head();    // Write header to disk -- the real commit
-    install_trans(0); // Now install writes to home locations
+    write_log();     // Write modified blocks from cache to log 将事务中修改的每个块从缓冲区缓存复制到磁盘上日志槽位中。
+    write_head();    // Write header to disk -- the real commit 将头块写入磁盘：这是提交点，写入后的崩溃将导致从日志恢复重演事务的写入操作
+    install_trans(0); // Now install writes to home locations 从日志中读取每个块，并将其写入文件系统中的适当位置
     log.lh.n = 0;
-    write_head();    // Erase the transaction from the log
+    write_head();    // Erase the transaction from the log 写入计数为零的日志头；这必须在下一个事务开始写入日志块之前发生，以便崩溃不会导致使用一个事务的头块和后续事务的日志块进行恢复。
   }
 }
 
@@ -226,9 +226,9 @@ log_write(struct buf *b)
     if (log.lh.block[i] == b->blockno)   // log absorbtion
       break;
   }
-  log.lh.block[i] = b->blockno;
+  log.lh.block[i] = b->blockno; // 
   if (i == log.lh.n) {  // Add new block to log?
-    bpin(b);
+    bpin(b); // 调用bpin将缓存固定在block cache中，以防止block cache将其逐出。
     log.lh.n++;
   }
   release(&log.lock);
