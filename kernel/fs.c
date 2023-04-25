@@ -575,7 +575,7 @@ namecmp(const char *s, const char *t)
 
 // Look for a directory entry in a directory.
 // If found, set *poff to byte offset of entry. 
-//在目录中搜索具有给定名称的条目。如果找到一个，它将返回一个指向相应inode的指针，解开锁定，
+//在目录中搜索具有给定名称的条目。如果找到一个，它将返回一个指向相应inode的指针
 // 并将*poff设置为目录中条目的字节偏移量,以满足调用方希望对其进行编辑的情形。
 struct inode*
 dirlookup(struct inode *dp, char *name, uint *poff)
