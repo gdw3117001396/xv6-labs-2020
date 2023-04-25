@@ -528,7 +528,7 @@ sys_symlink(void)
     return -1;
 
   begin_op();
-  // 分配一个inode结点，create返回锁定的inode
+  // 分配一个inode结点，create返回锁定的inode,这里会将ip上锁
   if ((ip = create(path, T_SYMLINK, 0, 0)) == 0) {
     end_op();
     return -1;

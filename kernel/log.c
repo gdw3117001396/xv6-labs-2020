@@ -198,7 +198,8 @@ commit()
     write_head();    // Write header to disk -- the real commit 将头块写入磁盘：这是提交点，写入后的崩溃将导致从日志恢复重演事务的写入操作
     install_trans(0); // Now install writes to home locations 从日志中读取每个块，并将其写入文件系统中的适当位置
     log.lh.n = 0;
-    write_head();    // Erase the transaction from the log 写入计数为零的日志头；这必须在下一个事务开始写入日志块之前发生，以便崩溃不会导致使用一个事务的头块和后续事务的日志块进行恢复。
+    write_head();    // Erase the transaction from the log 
+    //写入计数为零的日志头；这必须在下一个事务开始写入日志块之前发生，以便崩溃不会导致使用一个事务的头块和后续事务的日志块进行恢复。
   }
 }
 
