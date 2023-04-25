@@ -500,7 +500,7 @@ stati(struct inode *ip, struct stat *st)
 // Read data from inode.
 // Caller must hold ip->lock.
 // If user_dst==1, then dst is a user virtual address;
-// otherwise, dst is a kernel address. 处理文件的每个块，将数据从缓冲区复制到dst
+// otherwise, dst is a kernel address. 将ip中对应的数据块中的数据复制到dst上
 int
 readi(struct inode *ip, int user_dst, uint64 dst, uint off, uint n)
 {
@@ -531,7 +531,7 @@ readi(struct inode *ip, int user_dst, uint64 dst, uint off, uint n)
 // otherwise, src is a kernel address.
 // Returns the number of bytes successfully written.
 // If the return value is less than the requested n,
-// there was an error of some kind.  将数据复制到缓冲区
+// there was an error of some kind.  将src中的数据写入到ip对应off的数据块上
 int
 writei(struct inode *ip, int user_src, uint64 src, uint off, uint n)
 {

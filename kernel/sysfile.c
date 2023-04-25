@@ -323,31 +323,31 @@ sys_open(void)
     end_op();
     return -1;
   }
-
   // 处理符号链接
-  if(ip->type == T_SYMLINK && !(omode & O_NOFOLLOW)) {
+  if (ip->type == T_SYMLINK && !(omode & O_NOFOLLOW)) {
     // 若符号链接指向的仍然是符号链接，则递归的跟随它
     // 直到找到真正指向的文件
     // 但深度不能超过MAX_SYMLINK_DEPTH
-    for(int i = 0; i < MAX_SYMLINK_DEPTH; ++i) {
-      // 读出符号链接指向的路径
-      if(readi(ip, 0, (uint64)path, 0, MAXPATH) != MAXPATH) {
+    for (int i = 0; i < MAX_SYMLINK_DEPTH; ++i) {
+      // 从之前存放在ip中的数据取出path
+      if (readi(ip, 0, (uint64)path, 0, sizeof(path)) != sizeof(path)) {
         iunlockput(ip);
         end_op();
         return -1;
       }
-      iunlockput(ip);
-      ip = namei(path);
-      if(ip == 0) {
+      iunlockput(ip); // 因为下面的ip和这个ip不是同一个inode所以要先将这个ip解锁
+      ip = namei(path); // 根据路径找到对应的path
+      if (ip == 0) {
         end_op();
         return -1;
       }
       ilock(ip);
-      if(ip->type != T_SYMLINK)
+      if (ip->type != T_SYMLINK) {
         break;
+      }
     }
-    // 超过最大允许深度后仍然为符号链接，则返回错误
-    if(ip->type == T_SYMLINK) {
+    // 如果超过了最大的深度还是符合链接的话就返回错误
+    if (ip->type == T_SYMLINK) {
       iunlockput(ip);
       end_op();
       return -1;
@@ -529,17 +529,18 @@ sys_symlink(void)
 
   begin_op();
   // 分配一个inode结点，create返回锁定的inode
-  if((ip = create(path, T_SYMLINK, 0, 0)) == 0) {
+  if ((ip = create(path, T_SYMLINK, 0, 0)) == 0) {
     end_op();
     return -1;
   }
-  // 向inode数据块中写入target路径
-  if(writei(ip, 0, (uint64)target, 0, MAXPATH) < MAXPATH) {
+
+  // 将target写入到inode的第一个给直接映射块。
+  if (writei(ip, 0, (uint64)target, 0, sizeof(target)) != sizeof(target)) {
     iunlockput(ip);
     end_op();
     return -1;
   }
-  // ip->sym_name = path_target;
+
   iunlockput(ip);
   end_op();
   return 0;
