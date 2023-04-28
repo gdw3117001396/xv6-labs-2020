@@ -552,7 +552,9 @@ sys_munmap(void)
         p->vma[i].addr += length;
         p->vma[i].len -= length;
         break;
-      } else if (addr + length == p->vma[i].addr + p->vma[i].len) { // 在区域结束位置
+      } 
+      // 在区域结束位置
+      if (addr + length == p->vma[i].addr + p->vma[i].len) { 
         p->vma[i].len -= length;
         break;
       }
