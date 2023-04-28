@@ -102,7 +102,33 @@ e1000_transmit(struct mbuf *m)
   // the TX descriptor ring so that the e1000 sends it. Stash
   // a pointer so that it can be freed after sending.
   //
-  
+  acquire(&e1000_lock);
+  uint32 index = regs[E1000_TDT]; // 下一个可用的 buffer 的下标
+  struct tx_desc *desc = &tx_ring[index]; // 下一个可用的 buffer 的下标
+  // 如果该 buffer 中的数据还未传输完，则代表环形 buffer 列表全部用完，缓冲区不足，返回错误
+  if (!(desc->status & E1000_TXD_STAT_DD)) {
+    release(&e1000_lock);
+    return -1;
+  }
+  // 如果该下标仍有之前发送完毕但未释放的 mbuf，则释放
+  if (tx_mbufs[index]) {
+    mbuffree(tx_mbufs[index]);
+    tx_mbufs[index] = 0;
+  }
+
+   // 将要发送的 mbuf 的内存地址与长度填写到发送描述符中
+  desc->addr = (uint64)m->head;
+  desc->length = m->len;
+
+  // 设置参数，EOP 表示该 buffer 含有一个完整的 packet
+  // RS 告诉网卡在发送完成后，设置 status 中的 E1000_TXD_STAT_DD 位，表示发送完成。
+  desc->cmd = E1000_TXD_CMD_EOP | E1000_TXD_CMD_RS;
+
+  // 保留新 mbuf 的指针，方便后续再次用到同一下标时释放。
+  tx_mbufs[index] = m;
+
+  regs[E1000_TDT] = (index + 1) % TX_RING_SIZE;
+  release(&e1000_lock);
   return 0;
 }
 
@@ -115,6 +141,24 @@ e1000_recv(void)
   // Check for packets that have arrived from the e1000
   // Create and deliver an mbuf for each packet (using net_rx()).
   //
+  while (1) { // 每次 recv 可能接收多个包
+    uint32 index = (regs[E1000_RDT] + 1) % RX_RING_SIZE; 
+    struct rx_desc *desc = &rx_ring[index];
+    // 如果需要接收的包都已经接收完毕，则退出
+    if (!(desc->status & E1000_RXD_STAT_DD)) {
+      return ;
+    }
+
+    rx_mbufs[index]->len = desc->length;
+    net_rx(rx_mbufs[index]); // 传递给上层网络栈。上层负责释放 mbuf
+    //  // 分配并设置新的 mbuf，供给下一次轮到该下标时使用
+    rx_mbufs[index] = mbufalloc(0);
+    desc->addr = (uint64)rx_mbufs[index]->head;
+    desc->status = 0; // 将描述符的状态位清除为零
+
+    regs[E1000_RDT] = index;
+  }
+
 }
 
 void
