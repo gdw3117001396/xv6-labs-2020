@@ -29,7 +29,7 @@
 #define CLINT 0x2000000L
 #define CLINT_MTIMECMP(hartid) (CLINT + 0x4000 + 8*(hartid))
 #define CLINT_MTIME (CLINT + 0xBFF8) // cycles since boot.
-
+ 
 // qemu puts programmable interrupt controller here.
 #define PLIC 0x0c000000L
 #define PLIC_PRIORITY (PLIC + 0x0)
@@ -52,7 +52,7 @@
 #define TRAMPOLINE (MAXVA - PGSIZE)
 
 // map kernel stacks beneath the trampoline,
-// each surrounded by invalid guard pages.
+// each surrounded by invalid guard pages. p是0-63相当于给每一个内核进程分配两页，一页就是内核栈，一页是guard page
 #define KSTACK(p) (TRAMPOLINE - ((p)+1)* 2*PGSIZE)
 
 // User memory layout.

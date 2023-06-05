@@ -61,7 +61,7 @@ bzero(int dev, int bno)
 
 // Blocks.
 
-// Allocate a zeroed disk block.
+// Allocate a zeroed disk block. 分配一个新的磁盘块， 必须在事务内部调用balloc和bfree
 static uint
 balloc(uint dev)
 {
@@ -69,8 +69,10 @@ balloc(uint dev)
   struct buf *bp;
 
   bp = 0;
+  // 遍历每一个bitmap块
   for(b = 0; b < sb.size; b += BPB){
     bp = bread(dev, BBLOCK(b, sb));
+    // 遍历一个块里面的每一个bit
     for(bi = 0; bi < BPB && b + bi < sb.size; bi++){
       m = 1 << (bi % 8);
       if((bp->data[bi/8] & m) == 0){  // Is block free?
@@ -86,7 +88,7 @@ balloc(uint dev)
   panic("balloc: out of blocks");
 }
 
-// Free a disk block.
+// Free a disk block. 释放一个磁盘块，要在bitmap的对应位置清0
 static void
 bfree(int dev, uint b)
 {
@@ -173,7 +175,7 @@ bfree(int dev, uint b)
 // read or write that inode's ip->valid, ip->size, ip->type, &c.
 
 struct {
-  struct spinlock lock;
+  struct spinlock lock; // 保护inode 的dev, inum,ref
   struct inode inode[NINODE];
 } icache;
 
@@ -193,14 +195,16 @@ static struct inode* iget(uint dev, uint inum);
 // Allocate an inode on device dev.
 // Mark it as allocated by  giving it type type.
 // Returns an unlocked but allocated and referenced inode.
+//在设备dev上分配一个inode。通过给它提供type类型来标记它是被分配的。返回一个未被锁定但被分配和引用的节点。
 struct inode*
 ialloc(uint dev, short type)
 {
   int inum;
   struct buf *bp;
   struct dinode *dip;
-
+  // 遍历所有的inum
   for(inum = 1; inum < sb.ninodes; inum++){
+    // 读取对应的inode块中的inode内容
     bp = bread(dev, IBLOCK(inum, sb));
     dip = (struct dinode*)bp->data + inum%IPB;
     if(dip->type == 0){  // a free inode
@@ -218,7 +222,7 @@ ialloc(uint dev, short type)
 // Copy a modified in-memory inode to disk.
 // Must be called after every change to an ip->xxx field
 // that lives on disk, since i-node cache is write-through.
-// Caller must hold ip->lock.
+// Caller must hold ip->lock. 将inode写入磁盘，必须持有锁
 void
 iupdate(struct inode *ip)
 {
@@ -238,8 +242,8 @@ iupdate(struct inode *ip)
 }
 
 // Find the inode with number inum on device dev
-// and return the in-memory copy. Does not lock
-// the inode and does not read it from disk.
+// and return the in-memory copy. Does not lock 在设备dev上找到编号为inum的inode 并返回内存中的副本。不锁定inode，也不从磁盘上读取它
+// the inode and does not read it from disk.  获取指向inode的指针，修改引用计数
 static struct inode*
 iget(uint dev, uint inum)
 {
@@ -247,7 +251,7 @@ iget(uint dev, uint inum)
 
   acquire(&icache.lock);
 
-  // Is the inode already cached?
+  // Is the inode already cached? 
   empty = 0;
   for(ip = &icache.inode[0]; ip < &icache.inode[NINODE]; ip++){
     if(ip->ref > 0 && ip->dev == dev && ip->inum == inum){
@@ -285,7 +289,7 @@ idup(struct inode *ip)
 }
 
 // Lock the given inode.
-// Reads the inode from disk if necessary.
+// Reads the inode from disk if necessary. 给inode加锁，如果valid==0则要重新从磁盘读取
 void
 ilock(struct inode *ip)
 {
@@ -298,7 +302,7 @@ ilock(struct inode *ip)
   acquiresleep(&ip->lock);
 
   if(ip->valid == 0){
-    bp = bread(ip->dev, IBLOCK(ip->inum, sb));
+    bp = bread(ip->dev, IBLOCK(ip->inum, sb)); // 从磁盘中读取
     dip = (struct dinode*)bp->data + ip->inum%IPB;
     ip->type = dip->type;
     ip->major = dip->major;
@@ -323,13 +327,13 @@ iunlock(struct inode *ip)
   releasesleep(&ip->lock);
 }
 
-// Drop a reference to an in-memory inode.
+// Drop a reference to an in-memory inode. 删除对一个内存节点的引用。
 // If that was the last reference, the inode cache entry can
-// be recycled.
-// If that was the last reference and the inode has no links
+// be recycled. 如果这是最后一次引用，则可以回收该节点缓存条目。
+// If that was the last reference and the inode has no links 如果这是最后一次引用，并且该节点没有任何链接，则在磁盘上释放该节点（及其内容）。
 // to it, free the inode (and its content) on disk.
 // All calls to iput() must be inside a transaction in
-// case it has to free the inode.
+// case it has to free the inode. 所有对iput()的调用都必须在一个事务中进行，因为以防它必须释放该节点。
 void
 iput(struct inode *ip)
 {
@@ -344,7 +348,7 @@ iput(struct inode *ip)
 
     release(&icache.lock);
 
-    itrunc(ip);
+    itrunc(ip);  // 将文件截断为零字节
     ip->type = 0;
     iupdate(ip);
     ip->valid = 0;
@@ -374,7 +378,7 @@ iunlockput(struct inode *ip)
 // listed in block ip->addrs[NDIRECT].
 
 // Return the disk block address of the nth block in inode ip.
-// If there is no such block, bmap allocates one.
+// If there is no such block, bmap allocates one. // 返回节点ip中第n个块的磁盘块地址。 如果没有这样的块，bmap会分配一个
 static uint
 bmap(struct inode *ip, uint bn)
 {
@@ -406,7 +410,7 @@ bmap(struct inode *ip, uint bn)
 }
 
 // Truncate inode (discard contents).
-// Caller must hold ip->lock.
+// Caller must hold ip->lock. 将文件截断为零字节，释放inode中的数据块addr[NDIRECT + 1]
 void
 itrunc(struct inode *ip)
 {
@@ -452,7 +456,7 @@ stati(struct inode *ip, struct stat *st)
 // Read data from inode.
 // Caller must hold ip->lock.
 // If user_dst==1, then dst is a user virtual address;
-// otherwise, dst is a kernel address.
+// otherwise, dst is a kernel address. 将ip中对应的数据块中的数据复制到dst上
 int
 readi(struct inode *ip, int user_dst, uint64 dst, uint off, uint n)
 {
@@ -479,7 +483,7 @@ readi(struct inode *ip, int user_dst, uint64 dst, uint off, uint n)
 // Write data to inode.
 // Caller must hold ip->lock.
 // If user_src==1, then src is a user virtual address;
-// otherwise, src is a kernel address.
+// otherwise, src is a kernel address.  将src中的数据写入到ip对应off的数据块上
 int
 writei(struct inode *ip, int user_src, uint64 src, uint off, uint n)
 {
@@ -524,6 +528,8 @@ namecmp(const char *s, const char *t)
 
 // Look for a directory entry in a directory.
 // If found, set *poff to byte offset of entry.
+//在目录中搜索具有给定名称的条目。如果找到一个，它将返回一个指向相应inode的指针
+// 并将*poff设置为目录中条目的字节偏移量,以满足调用方希望对其进行编辑的情形。
 struct inode*
 dirlookup(struct inode *dp, char *name, uint *poff)
 {
@@ -550,7 +556,7 @@ dirlookup(struct inode *dp, char *name, uint *poff)
   return 0;
 }
 
-// Write a new directory entry (name, inum) into the directory dp.
+// Write a new directory entry (name, inum) into the directory dp. 将给定名称和inode编号的新目录条目写入目录dp
 int
 dirlink(struct inode *dp, char *name, uint inum)
 {
@@ -564,7 +570,7 @@ dirlink(struct inode *dp, char *name, uint inum)
     return -1;
   }
 
-  // Look for an empty dirent.
+  // Look for an empty dirent. 主循环读取目录条目，查找未分配的条目。当找到一个时，它会提前停止循环，并将off设置为可用条目的偏移量。
   for(off = 0; off < dp->size; off += sizeof(de)){
     if(readi(dp, 0, (uint64)&de, off, sizeof(de)) != sizeof(de))
       panic("dirlink read");
@@ -582,12 +588,12 @@ dirlink(struct inode *dp, char *name, uint inum)
 
 // Paths
 
-// Copy the next path element from path into name.
-// Return a pointer to the element following the copied one.
-// The returned path has no leading slashes,
+// Copy the next path element from path into name. 将path中的下一个path元素复制到name中。
+// Return a pointer to the element following the copied one.  返回一个指向复制后的元素的指针
+// The returned path has no leading slashes,  
 // so the caller can check *path=='\0' to see if the name is the last one.
-// If no name to remove, return 0.
-//
+// If no name to remove, return 0. 返回的路径没有前导斜线，所以调用者可以检查*path=='\0'，看看name是否是最后一个。 如果没有要删除的名字，返回0。
+// 返回path的下一级路径"a/bb/c" - > "bb/c"
 // Examples:
 //   skipelem("a/bb/c", name) = "bb/c", setting name = "a"
 //   skipelem("///a//bb", name) = "bb", setting name = "a"
@@ -619,10 +625,10 @@ skipelem(char *path, char *name)
   return path;
 }
 
-// Look up and return the inode for a path name.
-// If parent != 0, return the inode for the parent and copy the final
+// Look up and return the inode for a path name. 查询并返回一个路径名称的inode。
+// If parent != 0, return the inode for the parent and copy the final 如果parent !=0，返回parent的inode并将最后的路径元素复制到name中，name中必须有DIRSIZ字节的空间。
 // path element into name, which must have room for DIRSIZ bytes.
-// Must be called inside a transaction since it calls iput().
+// Must be called inside a transaction since it calls iput(). 必须在一个事务中调用，因为它调用了iput()。
 static struct inode*
 namex(char *path, int nameiparent, char *name)
 {
@@ -657,14 +663,14 @@ namex(char *path, int nameiparent, char *name)
   }
   return ip;
 }
-
+// 计算path并返回相应的inode
 struct inode*
 namei(char *path)
 {
   char name[DIRSIZ];
   return namex(path, 0, name);
 }
-
+// 它在最后一个元素之前停止，返回父目录的inode并将最后一个元素复制到name中
 struct inode*
 nameiparent(char *path, char *name)
 {

@@ -29,8 +29,8 @@ struct {
 
   // Linked list of all buffers, through prev/next.
   // Sorted by how recently the buffer was used.
-  // head.next is most recent, head.prev is least.
-  struct buf head;
+  // head.next is most recent, head.prev is least. head->prev是LRU块
+  struct buf head; // head没有数据，只是一个头指针
 } bcache;
 
 void
@@ -62,7 +62,7 @@ bget(uint dev, uint blockno)
 
   acquire(&bcache.lock);
 
-  // Is the block already cached?
+  // Is the block already cached? 在cache中找到了buf，获取睡眠锁
   for(b = bcache.head.next; b != &bcache.head; b = b->next){
     if(b->dev == dev && b->blockno == blockno){
       b->refcnt++;
@@ -78,7 +78,7 @@ bget(uint dev, uint blockno)
     if(b->refcnt == 0) {
       b->dev = dev;
       b->blockno = blockno;
-      b->valid = 0;
+      b->valid = 0; // 这样才会重新去磁盘读取buf
       b->refcnt = 1;
       release(&bcache.lock);
       acquiresleep(&b->lock);
@@ -88,7 +88,7 @@ bget(uint dev, uint blockno)
   panic("bget: no buffers");
 }
 
-// Return a locked buf with the contents of the indicated block.
+// Return a locked buf with the contents of the indicated block. 返回一个加锁的buf，如果bcache中没有就要从磁盘读取
 struct buf*
 bread(uint dev, uint blockno)
 {
@@ -102,13 +102,13 @@ bread(uint dev, uint blockno)
   return b;
 }
 
-// Write b's contents to disk.  Must be locked.
+// Write b's contents to disk.  Must be locked. 将修改后的缓冲区写到磁盘的相应块上，必须持有锁
 void
 bwrite(struct buf *b)
 {
   if(!holdingsleep(&b->lock))
     panic("bwrite");
-  virtio_disk_rw(b, 1);
+  virtio_disk_rw(b, 1); // 1表示写入
 }
 
 // Release a locked buffer.

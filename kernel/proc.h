@@ -1,7 +1,7 @@
 // Saved registers for kernel context switches.
 struct context {
-  uint64 ra;
-  uint64 sp;
+  uint64 ra; // 返回地址寄存器
+  uint64 sp; // 堆栈指针
 
   // callee-saved
   uint64 s0;
@@ -87,7 +87,7 @@ struct proc {
   struct spinlock lock;
 
   // p->lock must be held when using these:
-  enum procstate state;        // Process state
+  enum procstate state;        // Process state 表明进程是已分配、就绪态、运行态、等待I/O中（阻塞态）还是退出。
   struct proc *parent;         // Parent process
   void *chan;                  // If non-zero, sleeping on chan
   int killed;                  // If non-zero, have been killed
@@ -95,9 +95,9 @@ struct proc {
   int pid;                     // Process ID
 
   // these are private to the process, so p->lock need not be held.
-  uint64 kstack;               // Virtual address of kernel stack
+  uint64 kstack;               // Virtual address of kernel stack 内核栈区
   uint64 sz;                   // Size of process memory (bytes)
-  pagetable_t pagetable;       // User page table
+  pagetable_t pagetable;       // User page table 进程页表，以RISC-V硬件所期望的格式保存进程的页表
   struct trapframe *trapframe; // data page for trampoline.S
   struct context context;      // swtch() here to run process
   struct file *ofile[NOFILE];  // Open files

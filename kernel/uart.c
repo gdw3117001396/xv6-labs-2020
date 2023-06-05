@@ -82,7 +82,7 @@ uartinit(void)
 // blocks if the output buffer is full.
 // because it may block, it can't be called
 // from interrupts; it's only suitable for use
-// by write().
+// by write(). 右conslewrite调用
 void
 uartputc(int c)
 {
@@ -94,7 +94,7 @@ uartputc(int c)
   }
 
   while(1){
-    if(((uart_tx_w + 1) % UART_TX_BUF_SIZE) == uart_tx_r){
+    if(((uart_tx_w + 1) % UART_TX_BUF_SIZE) == uart_tx_r){ // buffer满了
       // buffer is full.
       // wait for uartstart() to open up space in the buffer.
       sleep(&uart_tx_r, &uart_tx_lock);

@@ -42,7 +42,7 @@ w_mepc(uint64 x)
 
 #define SSTATUS_SPP (1L << 8)  // Previous mode, 1=Supervisor, 0=User
 #define SSTATUS_SPIE (1L << 5) // Supervisor Previous Interrupt Enable
-#define SSTATUS_UPIE (1L << 4) // User Previous Interrupt Enable
+#define SSTATUS_UPIE (1L << 4) // User Previous Interrupt Enable没用到
 #define SSTATUS_SIE (1L << 1)  // Supervisor Interrupt Enable
 #define SSTATUS_UIE (1L << 0)  // User Interrupt Enable
 
@@ -191,7 +191,7 @@ w_mtvec(uint64 x)
 static inline void 
 w_satp(uint64 x)
 {
-  asm volatile("csrw satp, %0" : : "r" (x));
+  asm volatile("csrw satp, %0" : : "r" (x)); // 这里地址转换（页表）就会被启用了，之前还没有虚拟地址，运行这条指令之前，使用物理地址，还没有页表和映射
 }
 
 static inline uint64
@@ -278,7 +278,7 @@ intr_get()
   uint64 x = r_sstatus();
   return (x & SSTATUS_SIE) != 0;
 }
-
+// 栈指针
 static inline uint64
 r_sp()
 {
@@ -302,7 +302,7 @@ w_tp(uint64 x)
 {
   asm volatile("mv tp, %0" : : "r" (x));
 }
-
+// 返回值地址
 static inline uint64
 r_ra()
 {
@@ -311,7 +311,7 @@ r_ra()
   return x;
 }
 
-// flush the TLB.
+// flush the TLB. 用于刷新当前CPU的TLB
 static inline void
 sfence_vma()
 {

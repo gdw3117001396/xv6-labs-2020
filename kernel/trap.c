@@ -38,16 +38,16 @@ usertrap(void)
 {
   int which_dev = 0;
 
-  if((r_sstatus() & SSTATUS_SPP) != 0)
+  if((r_sstatus() & SSTATUS_SPP) != 0) 
     panic("usertrap: not from user mode");
 
   // send interrupts and exceptions to kerneltrap(),
-  // since we're now in the kernel.
+  // since we're now in the kernel. // stvec寄存器是指向trap vector的地址
   w_stvec((uint64)kernelvec);
 
   struct proc *p = myproc();
   
-  // save user program counter.
+  // save user program counter. 保存用户程序的pc到epc中
   p->trapframe->epc = r_sepc();
   
   if(r_scause() == 8){
@@ -57,7 +57,7 @@ usertrap(void)
       exit(-1);
 
     // sepc points to the ecall instruction,
-    // but we want to return to the next instruction.
+    // but we want to return to the next instruction. 这时候epc是保存的ecall指令，但是我们恢复到User mode的时候想执行下一个指令
     p->trapframe->epc += 4;
 
     // an interrupt will change sstatus &c registers,
@@ -65,7 +65,7 @@ usertrap(void)
     intr_on();
 
     syscall();
-  } else if((which_dev = devintr()) != 0){
+  } else if((which_dev = devintr()) != 0){  // 1=uart,disk  2=timer
     // ok
   } else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
@@ -96,7 +96,7 @@ usertrapret(void)
   // we're back in user space, where usertrap() is correct.
   intr_off();
 
-  // send syscalls, interrupts, and exceptions to trampoline.S
+  // send syscalls, interrupts, and exceptions to trampoline.S 设置stvec成uservec
   w_stvec(TRAMPOLINE + (uservec - trampoline));
 
   // set up trapframe values that uservec will need when
@@ -164,7 +164,7 @@ clockintr()
 {
   acquire(&tickslock);
   ticks++;
-  wakeup(&ticks);
+  wakeup(&ticks); // 确保sleep系统调用可以唤醒
   release(&tickslock);
 }
 

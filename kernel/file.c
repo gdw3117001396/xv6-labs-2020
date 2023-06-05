@@ -11,7 +11,7 @@
 #include "sleeplock.h"
 #include "file.h"
 #include "stat.h"
-#include "proc.h"
+#include "proc.h" 
 
 struct devsw devsw[NDEV];
 struct {
@@ -25,7 +25,7 @@ fileinit(void)
   initlock(&ftable.lock, "ftable");
 }
 
-// Allocate a file structure.
+// Allocate a file structure. 分配一个文件
 struct file*
 filealloc(void)
 {
@@ -43,7 +43,7 @@ filealloc(void)
   return 0;
 }
 
-// Increment ref count for file f.
+// Increment ref count for file f. 增加file的引用计数
 struct file*
 filedup(struct file *f)
 {
@@ -72,7 +72,7 @@ fileclose(struct file *f)
   f->ref = 0;
   f->type = FD_NONE;
   release(&ftable.lock);
-
+  // 处理pipe 和 inode
   if(ff.type == FD_PIPE){
     pipeclose(ff.pipe, ff.writable);
   } else if(ff.type == FD_INODE || ff.type == FD_DEVICE){

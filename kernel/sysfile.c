@@ -237,7 +237,9 @@ bad:
   end_op();
   return -1;
 }
-
+// 为新inode创建一个新名称。
+// 从调用nameiparent开始，以获取父目录的inode。然后调用dirlookup检查名称是否已经存在
+//如果名称确实存在，create的行为取决于它用于哪个系统调用, 返回已加锁的inode
 static struct inode*
 create(char *path, short type, short major, short minor)
 {
@@ -248,7 +250,7 @@ create(char *path, short type, short major, short minor)
     return 0;
 
   ilock(dp);
-
+  // 查看在目录dp中name是否存在了
   if((ip = dirlookup(dp, name, 0)) != 0){
     iunlockput(dp);
     ilock(ip);
@@ -257,7 +259,7 @@ create(char *path, short type, short major, short minor)
     iunlockput(ip);
     return 0;
   }
-
+  // 如果没有才到这里来创建一个新的ip
   if((ip = ialloc(dp->dev, type)) == 0)
     panic("create: ialloc");
 

@@ -11,7 +11,7 @@
 void
 plicinit(void)
 {
-  // set desired IRQ priorities non-zero (otherwise disabled).
+  // set desired IRQ priorities non-zero (otherwise disabled). 
   *(uint32*)(PLIC + UART0_IRQ*4) = 1;
   *(uint32*)(PLIC + VIRTIO0_IRQ*4) = 1;
 }
@@ -28,7 +28,7 @@ plicinithart(void)
   *(uint32*)PLIC_SPRIORITY(hart) = 0;
 }
 
-// ask the PLIC what interrupt we should serve.
+// ask the PLIC what interrupt we should serve. 告诉PIC中断由该CPU处理
 int
 plic_claim(void)
 {
@@ -37,7 +37,7 @@ plic_claim(void)
   return irq;
 }
 
-// tell the PLIC we've served this IRQ.
+// tell the PLIC we've served this IRQ.告诉PLIC中断处理完毕了
 void
 plic_complete(int irq)
 {

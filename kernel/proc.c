@@ -15,18 +15,18 @@ struct proc *initproc;
 int nextpid = 1;
 struct spinlock pid_lock;
 
-extern void forkret(void);
+extern void  forkret(void);
 static void wakeup1(struct proc *chan);
 static void freeproc(struct proc *p);
 
 extern char trampoline[]; // trampoline.S
 
-// initialize the proc table at boot time.
+// initialize the proc table at boot time. 为每个进程分配一个内核栈,将每个栈映射到KSTACK生成的虚拟地址，这为无效的栈保护页面留下了空间。
 void
 procinit(void)
 {
   struct proc *p;
-  
+   
   initlock(&pid_lock, "nextpid");
   for(p = proc; p < &proc[NPROC]; p++) {
       initlock(&p->lock, "proc");
@@ -38,15 +38,16 @@ procinit(void)
       if(pa == 0)
         panic("kalloc");
       uint64 va = KSTACK((int) (p - proc));
+      // 分配了两页虚拟内存，但是只有上面那一页映射到了物理内存，下面那页是无效页也就是gurad page
       kvmmap(va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
       p->kstack = va;
   }
-  kvminithart();
+  kvminithart(); // 将内核页表重新加载到satp中，以便硬件知道新的PTE。
 }
 
 // Must be called with interrupts disabled,
 // to prevent race with process being moved
-// to a different CPU.
+// to a different CPU. Xv6确保每个CPU的hartid在内核中存储在该CPU的tp寄存器中
 int
 cpuid()
 {
@@ -88,7 +89,7 @@ allocpid() {
 // Look in the process table for an UNUSED proc.
 // If found, initialize state required to run in the kernel,
 // and return with p->lock held.
-// If there are no free procs, or a memory allocation fails, return 0.
+// If there are no free procs, or a memory allocation fails, return 0. // 这里已经获取了p的锁
 static struct proc*
 allocproc(void)
 {
@@ -107,7 +108,7 @@ allocproc(void)
 found:
   p->pid = allocpid();
 
-  // Allocate a trapframe page.
+  // Allocate a trapframe page. 分配TRAPFREME page
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
     release(&p->lock);
     return 0;
@@ -124,7 +125,7 @@ found:
   // Set up new context to start executing at forkret,
   // which returns to user space.
   memset(&p->context, 0, sizeof(p->context));
-  p->context.ra = (uint64)forkret;
+  p->context.ra = (uint64)forkret;  // 进程刚开始运行的时候还有上下文，所以要伪造一个ra，来给swich调用返回
   p->context.sp = p->kstack + PGSIZE;
 
   return p;
@@ -207,7 +208,7 @@ uchar initcode[] = {
   0x00, 0x00, 0x00, 0x00
 };
 
-// Set up first user process.
+// Set up first user process. 这里其实没有真正的运行起来，还是要到内核调度线程去运行的
 void
 userinit(void)
 {
@@ -234,7 +235,7 @@ userinit(void)
 }
 
 // Grow or shrink user memory by n bytes.
-// Return 0 on success, -1 on failure.
+// Return 0 on success, -1 on failure. 用于进程减少或增长其内存
 int
 growproc(int n)
 {
@@ -337,7 +338,7 @@ exit(int status)
   if(p == initproc)
     panic("init exiting");
 
-  // Close all open files.
+  // Close all open files. 关闭所有文件
   for(int fd = 0; fd < NOFILE; fd++){
     if(p->ofile[fd]){
       struct file *f = p->ofile[fd];
@@ -374,7 +375,7 @@ exit(int status)
   // the parent-then-child rule says we have to lock it first.
   acquire(&original_parent->lock);
 
-  acquire(&p->lock);
+  acquire(&p->lock); // 为了进入sched()获取的
 
   // Give any children to init.
   reparent(p);
@@ -466,7 +467,7 @@ scheduler(void)
     
     int found = 0;
     for(p = proc; p < &proc[NPROC]; p++) {
-      acquire(&p->lock);
+      acquire(&p->lock); // 保证一个线程只能同时被一个CPU运行
       if(p->state == RUNNABLE) {
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
@@ -522,10 +523,10 @@ void
 yield(void)
 {
   struct proc *p = myproc();
-  acquire(&p->lock);
+  acquire(&p->lock); // 这里获取的锁是在内核调度程序中swtch过去后马上就是释放了，不是和下面配对的
   p->state = RUNNABLE;
   sched();
-  release(&p->lock);
+  release(&p->lock); // 释放的是在内核调度程序中swtch过来前获取的锁
 }
 
 // A fork child's very first scheduling by scheduler()
@@ -561,7 +562,7 @@ sleep(void *chan, struct spinlock *lk)
   // Once we hold p->lock, we can be
   // guaranteed that we won't miss any wakeup
   // (wakeup locks p->lock),
-  // so it's okay to release lk.
+  // so it's okay to release lk. 要进入睡眠的进程现在同时持有p->lock和lk,睡眠的时候会释放lk锁
   if(lk != &p->lock){  //DOC: sleeplock0
     acquire(&p->lock);  //DOC: sleeplock1
     release(lk);
@@ -571,12 +572,12 @@ sleep(void *chan, struct spinlock *lk)
   p->chan = chan;
   p->state = SLEEPING;
 
-  sched();
+  sched(); // 放弃CPU，运行别的进程去了，等到再次调度到的时候再回来
 
   // Tidy up.
   p->chan = 0;
 
-  // Reacquire original lock.
+  // Reacquire original lock.  醒来的时候要获取锁
   if(lk != &p->lock){
     release(&p->lock);
     acquire(lk);
@@ -591,7 +592,7 @@ wakeup(void *chan)
   struct proc *p;
 
   for(p = proc; p < &proc[NPROC]; p++) {
-    acquire(&p->lock);
+    acquire(&p->lock); // 先获取进程锁才可以wakeup,确保不会lost wakeup
     if(p->state == SLEEPING && p->chan == chan) {
       p->state = RUNNABLE;
     }

@@ -21,7 +21,10 @@ initlock(struct spinlock *lk, char *name)
 void
 acquire(struct spinlock *lk)
 {
-  push_off(); // disable interrupts to avoid deadlock.
+  // 关闭中断避免死锁,比如这样一段代码，开始先获取了锁，然后通过键盘输入产生了中断，然后键盘要从uart的缓冲区读取数据也要获取锁
+  // 这样的结果就是，中断代码在等待锁，而获取了锁的代码在等待键盘中断结束，从而产生了死锁
+  // 还可以使获取了锁的代码尽快运行完，因为不会有中断和时间中断
+  push_off(); // disable interrupts to avoid deadlock. 
   if(holding(lk))
     panic("acquire");
 
@@ -66,13 +69,13 @@ release(struct spinlock *lk)
   // On RISC-V, sync_lock_release turns into an atomic swap:
   //   s1 = &lk->locked
   //   amoswap.w zero, zero, (s1)
-  __sync_lock_release(&lk->locked);
+  __sync_lock_release(&lk->locked); // 设置lk->locked = 0
 
-  pop_off();
+  pop_off(); // 启用中断
 }
 
 // Check whether this cpu is holding the lock.
-// Interrupts must be off.
+// Interrupts must be off. 检查该CPU是否获取过该锁，此时中断必须是关闭的
 int
 holding(struct spinlock *lk)
 {
@@ -84,13 +87,14 @@ holding(struct spinlock *lk)
 // push_off/pop_off are like intr_off()/intr_on() except that they are matched:
 // it takes two pop_off()s to undo two push_off()s.  Also, if interrupts
 // are initially off, then push_off, pop_off leaves them off.
-
+// 同一个CPU可以获取多次锁，但不能获取同一个锁，这里使记录获取不同锁的次数
 void
 push_off(void)
 {
   int old = intr_get();
 
   intr_off();
+  // 第一次调用acquire记住此时的状态
   if(mycpu()->noff == 0)
     mycpu()->intena = old;
   mycpu()->noff += 1;
